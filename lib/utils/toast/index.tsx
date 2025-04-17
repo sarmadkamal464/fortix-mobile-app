@@ -6,7 +6,13 @@ export const ToastProvider = ({ children }: { children: React.ReactNode }) => {
   return (
     <>
       {children}
-      <Toast />
+      <Toast
+        position="top"
+        visibilityTime={3000}
+        autoHide
+        topOffset={50}
+        bottomOffset={40}
+      />
     </>
   );
 };
