@@ -1,4 +1,5 @@
 import { useAuth } from "@/lib/hooks/auth";
+import { usePushToken } from "@/lib/hooks/usePushToken";
 import React, { useState } from "react";
 import {
   View,
@@ -15,20 +16,30 @@ const LoginScreen = () => {
   const { loading, require2FA, login: authLogin, verify2FA } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [otp, setOtp] = useState("");
+  const pushToken = usePushToken();
 
   const handleLogin = async () => {
     if (!username || !password) {
       Alert.alert("Please enter both username and password");
       return;
     }
-    await authLogin({ username, password });
+
+    if (!pushToken) {
+      Alert.alert(
+        "Push token not ready yet. Please wait a few seconds and try again."
+      );
+      return;
+    }
+
+    await authLogin({ username, password, pushToken });
   };
 
   const handleVerify2FA = async () => {
     await verify2FA(otp);
   };
+
+  const isLoginDisabled = !username || !password || !pushToken;
 
   return (
     <KeyboardAvoidingView
@@ -53,7 +64,17 @@ const LoginScreen = () => {
         onChangeText={setPassword}
       />
 
-      <TouchableOpacity style={styles.button} onPress={handleLogin}>
+      {pushToken === null && (
+        <Text style={{ color: "gray", marginBottom: 10 }}>
+          Preparing device for notifications...
+        </Text>
+      )}
+
+      <TouchableOpacity
+        style={[styles.button, { opacity: isLoginDisabled ? 0.5 : 1 }]}
+        onPress={handleLogin}
+        disabled={isLoginDisabled}
+      >
         <Text style={styles.buttonText}>Login</Text>
       </TouchableOpacity>
     </KeyboardAvoidingView>

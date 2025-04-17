@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "134825954653",
+    "project_id": "fortix-development",
+    "storage_bucket": "fortix-development.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:134825954653:android:aa56d35ae652fca1dcacb4",
+        "android_client_info": {
+          "package_name": "com.anonymous.fortixmobileapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAb6-UaWGZwz64iWjFgt6PcBTlYQtLgmqE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
