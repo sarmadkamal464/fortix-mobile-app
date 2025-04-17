@@ -3,6 +3,7 @@ import React from "react";
 import { View, Text, StyleSheet, SafeAreaView, Pressable } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import LogoutButton from "@/components/LogoutButton";
+import LiveStreamPlayer from "@/components/LiveStreamPlayer";
 LogoutButton;
 
 export default function LiveMonitoringScreen() {
@@ -17,6 +18,7 @@ export default function LiveMonitoringScreen() {
       />
       <View style={styles.container}>
         <Text style={styles.title}>Live Monitoring</Text>
+        <LiveStreamPlayer />
         <Text style={styles.subtitle}>You're now viewing real-time data.</Text>
       </View>
     </SafeAreaView>
