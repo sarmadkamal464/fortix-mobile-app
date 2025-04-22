@@ -19,6 +19,7 @@ const LoginScreen = () => {
   const [otp, setOtp] = useState("");
   const pushToken = usePushToken();
 
+  console.log("pushToken => ", pushToken);
   const handleLogin = async () => {
     if (!username || !password) {
       Alert.alert("Please enter both username and password");
