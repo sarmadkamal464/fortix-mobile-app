@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 
 const LoginScreen = () => {
@@ -17,30 +18,29 @@ const LoginScreen = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
-  const pushToken = usePushToken();
+  const device_token = usePushToken();
 
-  console.log("pushToken => ", pushToken);
   const handleLogin = async () => {
     if (!username || !password) {
       Alert.alert("Please enter both username and password");
       return;
     }
 
-    if (!pushToken) {
+    if (!device_token) {
       Alert.alert(
         "Push token not ready yet. Please wait a few seconds and try again."
       );
       return;
     }
 
-    await authLogin({ username, password, pushToken });
+    await authLogin({ username, password, device_token });
   };
 
   const handleVerify2FA = async () => {
     await verify2FA(otp);
   };
 
-  const isLoginDisabled = !username || !password || !pushToken;
+  const isLoginDisabled = !username || !password || !device_token;
 
   return (
     <KeyboardAvoidingView
@@ -65,7 +65,7 @@ const LoginScreen = () => {
         onChangeText={setPassword}
       />
 
-      {pushToken === null && (
+      {device_token === null && (
         <Text style={{ color: "gray", marginBottom: 10 }}>
           Preparing device for notifications...
         </Text>
@@ -78,6 +78,15 @@ const LoginScreen = () => {
       >
         <Text style={styles.buttonText}>Login</Text>
       </TouchableOpacity>
+
+      {loading && (
+        <View style={styles.loadingOverlay}>
+          <View style={styles.spinnerContainer}>
+            <ActivityIndicator size="large" color="#007AFF" />
+            <Text style={styles.loadingText}>Logging you in...</Text>
+          </View>
+        </View>
+      )}
     </KeyboardAvoidingView>
   );
 };
@@ -117,5 +126,34 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",
+  },
+  loadingOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 999,
+  },
+  spinnerContainer: {
+    backgroundColor: "#fff",
+    paddingVertical: 20,
+    paddingHorizontal: 30,
+    borderRadius: 16,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: "#333",
+    fontWeight: "500",
   },
 });

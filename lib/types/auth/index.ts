@@ -1,7 +1,7 @@
 export interface LoginCredentials {
   username: string;
   password: string;
-  pushToken: string;
+  device_token: string;
 }
 export interface User {
   id: number;
