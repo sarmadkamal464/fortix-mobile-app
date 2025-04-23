@@ -1,17 +1,17 @@
-// app/live-monitoring.tsx
-import React, { useRef, useState } from "react";
+// components/LiveStreamPlayer.tsx
+import React, { useRef, useState, useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
-  useWindowDimensions,
   Pressable,
+  ActivityIndicator,
+  Dimensions,
+  ScaledSize,
 } from "react-native";
 import { Video, ResizeMode } from "expo-av";
-import * as ScreenOrientation from "expo-screen-orientation";
 import { Ionicons } from "@expo/vector-icons";
-import { Stack } from "expo-router";
+import * as ScreenOrientation from "expo-screen-orientation";
 import {
   PinchGestureHandler,
   PinchGestureHandlerGestureEvent,
@@ -22,47 +22,52 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 
-export default function LiveMonitoringScreen() {
-  const videoRef = useRef<Video>(null);
-  const { width, height } = useWindowDimensions();
-  const [isFullscreen, setIsFullscreen] = useState(false);
+type Props = {
+  streamUrl: string;
+};
 
-  // Shared value for zoom (default scale = 1)
+export default function LiveStreamPlayer({ streamUrl }: Props) {
+  const videoRef = useRef<Video>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [dimensions, setDimensions] = useState<ScaledSize>(
+    Dimensions.get("window")
+  );
+  const [isBuffering, setIsBuffering] = useState(true);
+  const [hasError, setHasError] = useState(false);
+
   const scale = useSharedValue(1);
 
-  // Update scale during pinch gesture
   const onPinchEvent = (event: PinchGestureHandlerGestureEvent) => {
-    scale.value = event.scale;
+    scale.value = event.nativeEvent.scale;
   };
 
-  // Reset zoom when gesture ends
   const onPinchEnd = () => {
     scale.value = withTiming(1);
   };
 
-  // Apply animated style using the shared scale value
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ scale: scale.value }],
-    };
-  });
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
 
-  // Calculate video dimensions based on fullscreen state:
-  // - Portrait (default): 16:9 video based on device width
-  // - Landscape (fullscreen): swap width/height accordingly
-  const videoWidth = isFullscreen ? height : width;
-  const videoHeight = isFullscreen ? width : width * (9 / 16);
+  const updateDimensions = () => {
+    setDimensions(Dimensions.get("window"));
+  };
 
-  // Toggle fullscreen by locking the screen orientation
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener(
+      "change",
+      updateDimensions
+    );
+    return () => subscription?.remove();
+  }, []);
+
   const handleToggleFullscreen = async () => {
     try {
       if (!isFullscreen) {
-        // Lock to LANDSCAPE when entering fullscreen
         await ScreenOrientation.lockAsync(
           ScreenOrientation.OrientationLock.LANDSCAPE
         );
       } else {
-        // Lock to PORTRAIT when exiting fullscreen
         await ScreenOrientation.lockAsync(
           ScreenOrientation.OrientationLock.PORTRAIT_UP
         );
@@ -73,99 +78,97 @@ export default function LiveMonitoringScreen() {
     }
   };
 
+  const { width, height } = dimensions;
+  const videoWidth = isFullscreen ? width : width;
+  const videoHeight = isFullscreen ? height : width * (9 / 16);
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      {/* Configure header for the screen via expo-router's Stack.Screen */}
-      <Stack.Screen options={{ title: "Live Monitoring" }} />
-      <View style={styles.screenContent}>
-        <Text style={styles.title}>Live Monitoring</Text>
-        <View style={styles.videoContainer}>
-          {/* Wrap the video in a PinchGestureHandler */}
-          <PinchGestureHandler
-            onGestureEvent={onPinchEvent}
-            onEnded={onPinchEnd}
-          >
-            <Animated.View
-              style={[
-                styles.animatedContainer,
-                { width: videoWidth, height: videoHeight },
-                animatedStyle,
-              ]}
-            >
-              <Video
-                ref={videoRef}
-                source={{
-                  uri: "https://r786r1wr2wd557-8000.proxy.runpod.net/streams/39/stream.m3u8", // Replace with your HLS stream URL
-                }}
-                useNativeControls
-                resizeMode={ResizeMode.CONTAIN}
-                shouldPlay
-                isMuted={false}
-                style={{ width: videoWidth, height: videoHeight }}
-              />
-            </Animated.View>
-          </PinchGestureHandler>
-          {/* Fullscreen toggle button overlay */}
-          {/* <Pressable
-            style={styles.fullscreenButton}
-            onPress={handleToggleFullscreen}
-          >
-            <Ionicons
-              name={isFullscreen ? "contract-outline" : "expand-outline"}
-              size={24}
-              color="white"
-            />
-          </Pressable> */}
-        </View>
-        <Text style={styles.description}>
-          Pinch to zoom the video. Tap the button for fullscreen.
-        </Text>
-      </View>
-    </SafeAreaView>
+    <View style={styles.videoContainer}>
+      <PinchGestureHandler onGestureEvent={onPinchEvent} onEnded={onPinchEnd}>
+        <Animated.View
+          style={[
+            styles.animatedContainer,
+            { width: videoWidth, height: videoHeight },
+            animatedStyle,
+          ]}
+        >
+          <Video
+            ref={videoRef}
+            source={{ uri: streamUrl }}
+            useNativeControls
+            resizeMode={ResizeMode.CONTAIN}
+            shouldPlay
+            isMuted={false}
+            style={{ width: videoWidth, height: videoHeight }}
+            onError={() => setHasError(true)}
+            onLoadStart={() => {
+              setHasError(false);
+              setIsBuffering(true);
+            }}
+            onReadyForDisplay={() => setIsBuffering(false)}
+          />
+          {isBuffering && (
+            <View style={styles.loaderOverlay}>
+              <ActivityIndicator size="large" color="#fff" />
+            </View>
+          )}
+          {hasError && (
+            <View style={styles.errorOverlay}>
+              <Text style={styles.errorText}>Failed to load stream</Text>
+            </View>
+          )}
+        </Animated.View>
+      </PinchGestureHandler>
+
+      <Pressable
+        style={styles.fullscreenButton}
+        onPress={handleToggleFullscreen}
+      >
+        <Ionicons
+          name={isFullscreen ? "contract-outline" : "expand-outline"}
+          size={24}
+          color="white"
+        />
+      </Pressable>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  screenContent: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: "600",
-    marginBottom: 8,
-    alignSelf: "center",
-  },
   videoContainer: {
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#000",
     overflow: "hidden",
-    alignSelf: "center",
-    marginBottom: 16,
+    marginBottom: 20,
     position: "relative",
   },
   animatedContainer: {
     justifyContent: "center",
     alignItems: "center",
   },
+  loaderOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.4)",
+  },
+  errorOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(255,0,0,0.3)",
+  },
+  errorText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
   fullscreenButton: {
     position: "absolute",
-    bottom: 8,
-    right: 8,
+    bottom: 10,
+    right: 10,
     backgroundColor: "rgba(0,0,0,0.6)",
     padding: 8,
     borderRadius: 4,
-  },
-  description: {
-    marginTop: 12,
-    fontSize: 16,
-    color: "#666",
-    textAlign: "center",
   },
 });

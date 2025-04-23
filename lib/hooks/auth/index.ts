@@ -5,7 +5,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import axiosInstance from "@/lib/utils/axios";
 import { LoginCredentials, LoginResponse } from "@/lib/types/auth";
-import { useToast } from "@/lib/utils/toast"; // Should be compatible with React Native
+import { useToast } from "@/lib/utils/toast";
 import { getTokenExpiryInDays } from "@/lib/utils/constants";
 
 export const useAuth = () => {
