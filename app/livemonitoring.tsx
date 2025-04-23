@@ -1,45 +1,107 @@
 // app/live-monitoring.tsx
-import React from "react";
-import { View, Text, StyleSheet, SafeAreaView, Pressable } from "react-native";
-import { Stack, useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  Pressable,
+  ActivityIndicator,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import LogoutButton from "@/components/LogoutButton";
 import LiveStreamPlayer from "@/components/LiveStreamPlayer";
-LogoutButton;
+import useFetchStreams from "@/lib/streaming";
+import { Stack } from "expo-router";
+import { StreamState } from "@/lib/types/streaming"; // Correct path to the StreamState type
 
 export default function LiveMonitoringScreen() {
+  const [state, setState] = useState<StreamState>({
+    streams: [],
+    pagination: {
+      page: 1, // Initialize default values for pagination
+      limit: 10, // You can adjust these defaults based on your needs
+      total: 0,
+      totalPages: 0,
+    },
+    loading: false,
+    error: null,
+  });
+
+  const fetchStreams = useFetchStreams(setState);
+
+  useEffect(() => {
+    fetchStreams();
+  }, []);
+
+  const handleRefresh = () => {
+    fetchStreams(); // Refresh stream list
+  };
+
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.container}>
       <Stack.Screen
         options={{
           title: "Live Monitoring",
-          headerBackVisible: false, // 👈 Removes back button
+          headerBackVisible: false,
           headerRight: () => <LogoutButton />,
         }}
       />
-      <View style={styles.container}>
+      <View style={styles.header}>
         <Text style={styles.title}>Live Monitoring</Text>
-        <LiveStreamPlayer />
-        <Text style={styles.subtitle}>You're now viewing real-time data.</Text>
+        <Pressable onPress={handleRefresh} style={styles.refreshButton}>
+          <Ionicons name="refresh" size={20} color="#fff" />
+        </Pressable>
       </View>
-    </SafeAreaView>
+
+      {state.loading ? (
+        <View style={styles.loading}>
+          <ActivityIndicator size="large" color="#000" />
+        </View>
+      ) : (
+        <FlatList
+          data={state.streams}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={({ item }) => (
+            <LiveStreamPlayer
+              key={item.id}
+              streamUrl={`https://6eegczjj7onvbj-8000.proxy.runpod.net/streams/${item.id}/stream.m3u8`}
+            />
+          )}
+          contentContainerStyle={{ paddingBottom: 20 }}
+          refreshing={state.loading}
+          onRefresh={handleRefresh}
+        />
+      )}
+    </View>
   );
 }
+
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
   container: {
     flex: 1,
-    padding: 24,
+    backgroundColor: "#fff",
+    paddingHorizontal: 16,
+    paddingTop: 24,
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
   },
   title: {
     fontSize: 22,
-    fontWeight: "bold",
-    marginBottom: 10,
+    fontWeight: "600",
   },
-  subtitle: {
-    fontSize: 16,
-    color: "#666",
+  refreshButton: {
+    backgroundColor: "#007bff",
+    padding: 8,
+    borderRadius: 6,
+  },
+  loading: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
