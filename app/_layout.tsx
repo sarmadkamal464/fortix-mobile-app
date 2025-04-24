@@ -1,14 +1,14 @@
-import { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import * as Notifications from "expo-notifications";
 import { ToastProvider } from "@/lib/utils/toast";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Stack } from "expo-router";
-import { StyleSheet, Platform } from "react-native";
+import NotificationModal from "@/components/NotificationModel";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
-// Configure how notifications are shown when the app is foregrounded
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
+    shouldShowAlert: false,
     shouldPlaySound: false,
     shouldSetBadge: false,
   }),
@@ -18,20 +18,41 @@ export default function RootLayout() {
   const notificationListener = useRef<Notifications.Subscription>();
   const responseListener = useRef<Notifications.Subscription>();
 
+  const [modalVisible, setModalVisible] = useState(false);
+  const [popupData, setPopupData] = useState<{
+    title?: string | null;
+    body?: string | null;
+    imageUrl?: string;
+  }>({});
+
+  const showPopup = (notification: Notifications.Notification) => {
+    const { title, body, data } = notification.request.content;
+    const imageUrl = (data as any).image_url;
+    setPopupData({ title, body, imageUrl });
+    setModalVisible(true);
+  };
+
   useEffect(() => {
-    // This listens for incoming notifications
+    // 1. Listen while app is running
     notificationListener.current =
       Notifications.addNotificationReceivedListener((notification) => {
         console.log("Notification received in foreground:", notification);
-        // You can also trigger in-app alerts, badges, etc here
+        showPopup(notification);
       });
 
-    // This listens for the user interacting with the notification
     responseListener.current =
       Notifications.addNotificationResponseReceivedListener((response) => {
-        console.log("Notification clicked by user:", response);
-        // You can use response.notification.request.content.data to handle navigation
+        showPopup(response.notification);
       });
+
+    // 2. Check if app was launched from a notification when it was killed
+    (async () => {
+      const lastNotificationResponse =
+        await Notifications.getLastNotificationResponseAsync();
+      if (lastNotificationResponse) {
+        showPopup(lastNotificationResponse.notification);
+      }
+    })();
 
     return () => {
       Notifications.removeNotificationSubscription(
@@ -42,16 +63,20 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <GestureHandlerRootView style={styles.container}>
-      <ToastProvider>
-        <Stack />
-      </ToastProvider>
-    </GestureHandlerRootView>
+    <SafeAreaProvider>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <ToastProvider>
+          <Stack />
+          <NotificationModal
+            //key={`-${popupData?.imageUrl}`} // 👈 force remount on changes
+            visible={modalVisible}
+            onClose={() => setModalVisible(false)}
+            imageUrl={popupData.imageUrl}
+            title={popupData.title}
+            body={popupData.body}
+          />
+        </ToastProvider>
+      </GestureHandlerRootView>
+    </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});
