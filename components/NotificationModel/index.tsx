@@ -10,6 +10,8 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import * as FileSystem from "expo-file-system";
+import * as MediaLibrary from "expo-media-library";
 import {
   GestureHandlerRootView,
   PanGestureHandler,
@@ -24,8 +26,8 @@ import Animated, {
   useAnimatedStyle,
   useAnimatedGestureHandler,
   withTiming,
-  runOnJS,
 } from "react-native-reanimated";
+import { useToast } from "@/lib/utils/toast";
 
 interface NotificationModalProps {
   visible: boolean;
@@ -43,6 +45,7 @@ const NotificationModal: React.FC<NotificationModalProps> = ({
   body,
 }) => {
   const [loading, setLoading] = useState(true);
+  const { successToast, errorToast } = useToast();
 
   const scale = useSharedValue(1);
   const translateX = useSharedValue(0);
@@ -93,10 +96,61 @@ const NotificationModal: React.FC<NotificationModalProps> = ({
         translateX.value = withTiming(0);
         translateY.value = withTiming(0);
       } else {
-        scale.value = withTiming(2); // zoom in
+        scale.value = withTiming(2);
       }
     },
   });
+
+  const handleDownload = async (imageUrl: string | undefined) => {
+    if (!imageUrl) {
+      errorToast("No image URL provided.");
+      return;
+    }
+
+    if (typeof imageUrl !== "string") {
+      errorToast("Invalid image URL.");
+      console.error("Invalid image URL:", imageUrl);
+      return;
+    }
+
+    try {
+      // Request permissions (Android 10+)
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== "granted") {
+        errorToast("Media library permission not granted.");
+        return;
+      }
+
+      // Save to the document directory (Scoped Storage)
+      const fileUri =
+        FileSystem.documentDirectory + `downloaded_${Date.now()}.jpg`;
+
+      console.log("Downloading image from:", imageUrl);
+
+      // Download the image
+      const downloadResult = await FileSystem.downloadAsync(imageUrl, fileUri);
+      console.log("Download successful:", downloadResult.uri);
+      if (!downloadResult?.uri) {
+        errorToast("Image download failed.");
+        return;
+      }
+
+      // Save to gallery
+      const asset = await MediaLibrary.createAssetAsync(downloadResult.uri);
+      const album = await MediaLibrary.getAlbumAsync("Download");
+
+      if (album) {
+        await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+      } else {
+        await MediaLibrary.createAlbumAsync("Download", asset, false);
+      }
+
+      successToast("Image saved to gallery!");
+    } catch (error: any) {
+      console.error("Download error:", error);
+      errorToast(`Download error: ${error.message}`);
+    }
+  };
 
   return (
     <Modal
@@ -108,9 +162,19 @@ const NotificationModal: React.FC<NotificationModalProps> = ({
       <GestureHandlerRootView style={{ flex: 1 }}>
         <View style={styles.overlay}>
           <View style={styles.popup}>
-            <Pressable style={styles.closeButton} onPress={onClose}>
-              <Ionicons name="close" size={28} color="#fff" />
-            </Pressable>
+            <View style={styles.headerButtons}>
+              {imageUrl && (
+                <Pressable
+                  style={styles.iconButton}
+                  onPress={() => handleDownload(imageUrl)}
+                >
+                  <Ionicons name="download" size={26} color="#fff" />
+                </Pressable>
+              )}
+              <Pressable style={styles.iconButton} onPress={onClose}>
+                <Ionicons name="close" size={28} color="#fff" />
+              </Pressable>
+            </View>
 
             <ScrollView contentContainerStyle={styles.scroll}>
               {imageUrl && (
@@ -170,11 +234,16 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingHorizontal: 20,
   },
-  closeButton: {
+  headerButtons: {
     position: "absolute",
     top: 20,
     right: 20,
+    flexDirection: "row",
     zIndex: 10,
+  },
+  iconButton: {
+    marginLeft: 12,
+    padding: 8,
   },
   scroll: {
     flexGrow: 1,
