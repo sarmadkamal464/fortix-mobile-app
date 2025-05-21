@@ -7,12 +7,14 @@ import {
   StyleSheet,
   Pressable,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import LogoutButton from "@/components/LogoutButton";
 import LiveStreamPlayer from "@/components/LiveStreamPlayer";
 import useFetchStreams from "@/lib/streaming";
 import { Stack } from "expo-router";
+import Header from "@/components/Header"; // Correct path to the Header component
 import { StreamState } from "@/lib/types/streaming"; // Correct path to the StreamState type
 
 export default function LiveMonitoringScreen() {
@@ -29,6 +31,7 @@ export default function LiveMonitoringScreen() {
   });
 
   const fetchStreams = useFetchStreams(setState);
+  const activeStreams = state.streams.filter(stream => stream.status === 'active');
 
   useEffect(() => {
     fetchStreams();
@@ -40,12 +43,8 @@ export default function LiveMonitoringScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen
-        options={{
-          title: "Live Monitoring",
-          headerBackVisible: false,
-          headerRight: () => <LogoutButton />,
-        }}
+      <Header 
+      title="Live Monitoring"
       />
       <View style={styles.header}>
         <Text style={styles.title}>Live Monitoring</Text>
@@ -60,12 +59,12 @@ export default function LiveMonitoringScreen() {
         </View>
       ) : (
         <FlatList
-          data={state.streams}
+          data={activeStreams}
           keyExtractor={(item) => item.id.toString()}
           renderItem={({ item }) => (
             <LiveStreamPlayer
               key={item.id}
-              streamUrl={`https://6eegczjj7onvbj-8000.proxy.runpod.net/streams/${item.id}/stream.m3u8`}
+              streamUrl={`${item.business_case?.model_url}streams/${item.id}/stream.m3u8`}
             />
           )}
           contentContainerStyle={{ paddingBottom: 20 }}
@@ -82,9 +81,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
     paddingHorizontal: 16,
-    paddingTop: 24,
+    paddingTop: Platform.OS === "ios" ? 30 : 0,
   },
   header: {
+    paddingTop: 16,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
