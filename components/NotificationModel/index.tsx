@@ -325,16 +325,17 @@ export default NotificationModal;
 const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "rgba(0, 0, 0, 0.9)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   modalContainer: {
     position: "absolute",
     top: 0,
     left: 0,
     right: 0,
+    bottom: 0,
     backgroundColor: "#1a1a1a",
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -343,7 +344,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
-    maxHeight: SCREEN_HEIGHT * 0.9,
   },
   handle: {
     width: 40,
@@ -355,6 +355,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   content: {
+    flex: 1,
     padding: 20,
   },
   headerButtons: {
@@ -373,9 +374,12 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   scrollView: {
-    maxHeight: SCREEN_HEIGHT * 0.7,
+    flex: 1,
   },
   scrollContent: {
+    flexGrow: 1,
+    justifyContent: "center",
+    alignItems: "center",
     paddingTop: 40,
   },
   imageContainer: {
@@ -418,6 +422,7 @@ const styles = StyleSheet.create({
   image: {
     width: "100%",
     height: "100%",
+    resizeMode: "contain",
   },
   title: {
     fontSize: 22,
@@ -428,6 +433,9 @@ const styles = StyleSheet.create({
     ...Platform.select({
       ios: {
         fontFamily: 'System',
+      },
+      android: {
+        fontFamily: 'sans-serif-medium',
       },
     }),
   },
@@ -440,6 +448,9 @@ const styles = StyleSheet.create({
     ...Platform.select({
       ios: {
         fontFamily: 'System',
+      },
+      android: {
+        fontFamily: 'sans-serif',
       },
     }),
   },
