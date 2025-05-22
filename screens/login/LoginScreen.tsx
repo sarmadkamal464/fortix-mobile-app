@@ -11,33 +11,54 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  Image,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons"; // For the eye icon
 
 const LoginScreen = () => {
   const { loading, require2FA, login: authLogin, verify2FA } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [usernameError, setUsernameError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
   const device_token = usePushToken();
+   console.log("Device Token", device_token)
 
-  const handleLogin = async () => {
-    if (!username || !password) {
-      Alert.alert("Please enter both username and password");
-      return;
+  const validateInputs = () => {
+    let isValid = true;
+
+    if (!username) {
+      setUsernameError("Username is required");
+      isValid = false;
+    } else {
+      setUsernameError("");
     }
 
+    if (!password) {
+      setPasswordError("Password is required");
+      isValid = false;
+    } else if (password.length < 8) {
+      setPasswordError("Password must be at least 8 characters long");
+      isValid = false;
+    } else {
+      setPasswordError("");
+    }
+
+    return isValid;
+  };
+
+  const handleLogin = async () => {
+    if (!validateInputs()) return;
+
     if (!device_token) {
-      Alert.alert(
-        "Push token not ready yet. Please wait a few seconds and try again."
-      );
+      setUsernameError("");
+      setPasswordError("Push token not ready yet. Please try again later.");
       return;
     }
 
     await authLogin({ username, password, device_token });
-  };
-
-  const handleVerify2FA = async () => {
-    await verify2FA(otp);
   };
 
   const isLoginDisabled = !username || !password || !device_token;
@@ -45,40 +66,71 @@ const LoginScreen = () => {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
+      behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      {/* Logo Section */}
+      <View style={styles.logoContainer}>
+        <Image
+          source={require("../../assets/images/logo.png")} // Replace with your logo path
+          style={styles.logo}
+        />
+      </View>
+
+      {/* Title */}
       <Text style={styles.title}>Login</Text>
 
+      {/* Username Input */}
       <TextInput
         style={styles.input}
         placeholder="Username"
+        placeholderTextColor="#aaa"
         autoCapitalize="none"
         value={username}
         onChangeText={setUsername}
       />
+      {usernameError ? (
+        <Text style={styles.errorText}>{usernameError}</Text>
+      ) : null}
 
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
+      {/* Password Input */}
+      <View style={styles.passwordContainer}>
+        <TextInput
+          style={styles.passwordInput}
+          placeholder="Password"
+          placeholderTextColor="#aaa"
+          secureTextEntry={!isPasswordVisible}
+          value={password}
+          onChangeText={setPassword}
+        />
+        <TouchableOpacity
+          onPress={() => setIsPasswordVisible((prev) => !prev)}
+          style={styles.eyeIcon}>
+          <Ionicons
+            name={isPasswordVisible ? "eye-off-outline" : "eye-outline"}
+            size={24}
+            color="#aaa"
+          />
+        </TouchableOpacity>
+      </View>
+      {passwordError ? (
+        <Text style={styles.errorText}>{passwordError}</Text>
+      ) : null}
 
+      {/* Device Token Message */}
       {device_token === null && (
         <Text style={{ color: "gray", marginBottom: 10 }}>
           Preparing device for notifications...
         </Text>
       )}
 
+      {/* Login Button */}
       <TouchableOpacity
         style={[styles.button, { opacity: isLoginDisabled ? 0.5 : 1 }]}
         onPress={handleLogin}
-        disabled={isLoginDisabled}
-      >
+        disabled={isLoginDisabled}>
         <Text style={styles.buttonText}>Login</Text>
       </TouchableOpacity>
 
+      {/* Loading Overlay */}
       {loading && (
         <View style={styles.loadingOverlay}>
           <View style={styles.spinnerContainer}>
@@ -100,6 +152,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 24,
   },
+  logoContainer: {
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  logo: {
+    width: 150, // Adjust the width of the logo
+    height: 150, // Adjust the height of the logo
+    resizeMode: "contain",
+  },
   title: {
     fontSize: 28,
     fontWeight: "bold",
@@ -112,7 +173,28 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: 16,
-    marginBottom: 16,
+    marginBottom: 8,
+  },
+  passwordContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderColor: "#ccc",
+    borderWidth: 1,
+    borderRadius: 10,
+    marginBottom: 8,
+    paddingHorizontal: 16,
+  },
+  passwordInput: {
+    flex: 1,
+    height: 48,
+  },
+  eyeIcon: {
+    marginLeft: 8,
+  },
+  errorText: {
+    color: "red",
+    fontSize: 12,
+    marginBottom: 8,
   },
   button: {
     backgroundColor: "#007AFF",

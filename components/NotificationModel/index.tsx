@@ -1,6 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
-  Modal,
   View,
   Text,
   Image,
@@ -8,10 +7,13 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
+  Dimensions,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as FileSystem from "expo-file-system";
 import * as MediaLibrary from "expo-media-library";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   GestureHandlerRootView,
   PanGestureHandler,
@@ -26,8 +28,14 @@ import Animated, {
   useAnimatedStyle,
   useAnimatedGestureHandler,
   withTiming,
+  withSpring,
+  runOnJS,
+  interpolate,
+  Extrapolate,
 } from "react-native-reanimated";
 import { useToast } from "@/lib/utils/toast";
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface NotificationModalProps {
   visible: boolean;
@@ -45,33 +53,105 @@ const NotificationModal: React.FC<NotificationModalProps> = ({
   body,
 }) => {
   const [loading, setLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const { successToast, errorToast } = useToast();
+  const insets = useSafeAreaInsets();
+
+  // Animation values
+  const translateY = useSharedValue(-SCREEN_HEIGHT);
+  const gestureY = useSharedValue(0);
+  const isDragging = useSharedValue(false);
 
   const scale = useSharedValue(1);
   const translateX = useSharedValue(0);
-  const translateY = useSharedValue(0);
+  const translateYImage = useSharedValue(0);
 
-  const animatedStyle = useAnimatedStyle(() => ({
+  // Reset states when imageUrl changes
+  useEffect(() => {
+    if (imageUrl) {
+      setLoading(true);
+      setImageError(false);
+    }
+  }, [imageUrl]);
+
+  useEffect(() => {
+    if (visible) {
+      translateY.value = withSpring(0, {
+        damping: 15,
+        stiffness: 100,
+      });
+    } else {
+      translateY.value = withTiming(-SCREEN_HEIGHT, {
+        duration: 300,
+      });
+    }
+  }, [visible]);
+
+  const panGestureHandler = useAnimatedGestureHandler<
+    PanGestureHandlerGestureEvent,
+    { startY: number }
+  >({
+    onStart: (_, ctx) => {
+      ctx.startY = translateY.value;
+      isDragging.value = true;
+    },
+    onActive: (event, ctx) => {
+      gestureY.value = ctx.startY + event.translationY;
+      translateY.value = Math.max(0, gestureY.value);
+    },
+    onEnd: (event) => {
+      isDragging.value = false;
+      if (event.velocityY > 500 || translateY.value > SCREEN_HEIGHT * 0.3) {
+        translateY.value = withTiming(SCREEN_HEIGHT, {
+          duration: 300,
+        }, () => {
+          runOnJS(onClose)();
+        });
+      } else {
+        translateY.value = withSpring(0, {
+          damping: 15,
+          stiffness: 100,
+        });
+      }
+    },
+  });
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        { translateY: translateY.value },
+        { scale: interpolate(
+          translateY.value,
+          [-SCREEN_HEIGHT, 0],
+          [0.8, 1],
+          Extrapolate.CLAMP
+        ) },
+      ],
+      paddingTop: insets.top,
+    };
+  });
+
+  const imageAnimatedStyle = useAnimatedStyle(() => ({
     transform: [
       { scale: scale.value },
       { translateX: translateX.value },
-      { translateY: translateY.value },
+      { translateY: translateYImage.value },
     ],
   }));
 
-  const pinchHandler =
-    useAnimatedGestureHandler<PinchGestureHandlerGestureEvent>({
-      onActive: (event) => {
-        scale.value = Math.max(1, Math.min(event.scale, 3));
-      },
-      onEnd: () => {
-        if (scale.value <= 1) {
-          scale.value = withTiming(1);
-          translateX.value = withTiming(0);
-          translateY.value = withTiming(0);
-        }
-      },
-    });
+  const pinchHandler = useAnimatedGestureHandler<PinchGestureHandlerGestureEvent>({
+    onActive: (event) => {
+      scale.value = Math.max(1, Math.min(event.scale, 3));
+    },
+    onEnd: () => {
+      if (scale.value <= 1) {
+        scale.value = withTiming(1);
+        translateX.value = withTiming(0);
+        translateYImage.value = withTiming(0);
+      }
+    },
+  });
 
   const panHandler = useAnimatedGestureHandler<
     PanGestureHandlerGestureEvent,
@@ -79,12 +159,12 @@ const NotificationModal: React.FC<NotificationModalProps> = ({
   >({
     onStart: (_, ctx) => {
       ctx.startX = translateX.value;
-      ctx.startY = translateY.value;
+      ctx.startY = translateYImage.value;
     },
     onActive: (event, ctx) => {
       if (scale.value > 1) {
         translateX.value = ctx.startX + event.translationX;
-        translateY.value = ctx.startY + event.translationY;
+        translateYImage.value = ctx.startY + event.translationY;
       }
     },
   });
@@ -94,7 +174,7 @@ const NotificationModal: React.FC<NotificationModalProps> = ({
       if (scale.value > 1) {
         scale.value = withTiming(1);
         translateX.value = withTiming(0);
-        translateY.value = withTiming(0);
+        translateYImage.value = withTiming(0);
       } else {
         scale.value = withTiming(2);
       }
@@ -107,35 +187,24 @@ const NotificationModal: React.FC<NotificationModalProps> = ({
       return;
     }
 
-    if (typeof imageUrl !== "string") {
-      errorToast("Invalid image URL.");
-      console.error("Invalid image URL:", imageUrl);
-      return;
-    }
-
     try {
-      // Request permissions (Android 10+)
+      setDownloading(true);
       const { status } = await MediaLibrary.requestPermissionsAsync();
       if (status !== "granted") {
         errorToast("Media library permission not granted.");
+        setDownloading(false);
         return;
       }
 
-      // Save to the document directory (Scoped Storage)
-      const fileUri =
-        FileSystem.documentDirectory + `downloaded_${Date.now()}.jpg`;
-
-      console.log("Downloading image from:", imageUrl);
-
-      // Download the image
+      const fileUri = FileSystem.documentDirectory + `downloaded_${Date.now()}.jpg`;
       const downloadResult = await FileSystem.downloadAsync(imageUrl, fileUri);
-      console.log("Download successful:", downloadResult.uri);
+      
       if (!downloadResult?.uri) {
         errorToast("Image download failed.");
+        setDownloading(false);
         return;
       }
 
-      // Save to gallery
       const asset = await MediaLibrary.createAssetAsync(downloadResult.uri);
       const album = await MediaLibrary.getAlbumAsync("Download");
 
@@ -146,37 +215,54 @@ const NotificationModal: React.FC<NotificationModalProps> = ({
       }
 
       successToast("Image saved to gallery!");
+      setDownloading(false);
+      onClose();
     } catch (error: any) {
       console.error("Download error:", error);
       errorToast(`Download error: ${error.message}`);
+      setDownloading(false);
     }
   };
 
+  if (!visible) return null;
+
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <View style={styles.overlay}>
-          <View style={styles.popup}>
-            <View style={styles.headerButtons}>
-              {imageUrl && (
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <PanGestureHandler onGestureEvent={panGestureHandler}>
+        <Animated.View style={[styles.modalContainer, animatedStyle]}>
+          <View style={styles.handle} />
+          <View style={[styles.content, { paddingBottom: insets.bottom }]}>
+            <View style={[styles.headerButtons, { top: insets.top + 10 }]}>
+              {imageUrl && !imageError && (
                 <Pressable
-                  style={styles.iconButton}
-                  onPress={() => handleDownload(imageUrl)}
+                  style={[styles.iconButton, downloading && styles.disabledButton]}
+                  onPress={() => !downloading && handleDownload(imageUrl)}
+                  disabled={downloading}
                 >
-                  <Ionicons name="download" size={26} color="#fff" />
+                  {downloading ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Ionicons name="download" size={26} color="#fff" />
+                  )}
                 </Pressable>
               )}
-              <Pressable style={styles.iconButton} onPress={onClose}>
+              <Pressable 
+                style={styles.iconButton} 
+                onPress={onClose}
+                disabled={downloading}
+              >
                 <Ionicons name="close" size={28} color="#fff" />
               </Pressable>
             </View>
 
-            <ScrollView contentContainerStyle={styles.scroll}>
+            <ScrollView 
+              style={styles.scrollView}
+              contentContainerStyle={[
+                styles.scrollContent,
+                { paddingBottom: insets.bottom + 20 }
+              ]}
+              showsVerticalScrollIndicator={false}
+            >
               {imageUrl && (
                 <TapGestureHandler
                   numberOfTaps={2}
@@ -188,21 +274,34 @@ const NotificationModal: React.FC<NotificationModalProps> = ({
                       <Animated.View>
                         <PinchGestureHandler onGestureEvent={pinchHandler}>
                           <Animated.View
-                            style={[styles.imageContainer, animatedStyle]}
+                            style={[styles.imageContainer, imageAnimatedStyle]}
                           >
                             {loading && (
-                              <ActivityIndicator
-                                style={styles.loader}
-                                size="large"
-                                color="#fff"
+                              <View style={styles.loaderContainer}>
+                                <ActivityIndicator
+                                  size="large"
+                                  color="#fff"
+                                />
+                                <Text style={styles.loadingText}>Loading image...</Text>
+                              </View>
+                            )}
+                            {imageError ? (
+                              <View style={styles.errorContainer}>
+                                <Ionicons name="image-outline" size={40} color="#666" />
+                                <Text style={styles.errorText}>Failed to load image</Text>
+                              </View>
+                            ) : (
+                              <Image
+                                source={{ uri: imageUrl }}
+                                style={styles.image}
+                                resizeMode="contain"
+                                onLoadEnd={() => setLoading(false)}
+                                onError={() => {
+                                  setLoading(false);
+                                  setImageError(true);
+                                }}
                               />
                             )}
-                            <Image
-                              source={{ uri: imageUrl }}
-                              style={styles.image}
-                              resizeMode="contain"
-                              onLoadEnd={() => setLoading(false)}
-                            />
                           </Animated.View>
                         </PinchGestureHandler>
                       </Animated.View>
@@ -215,41 +314,73 @@ const NotificationModal: React.FC<NotificationModalProps> = ({
               {body && <Text style={styles.body}>{body}</Text>}
             </ScrollView>
           </View>
-        </View>
-      </GestureHandlerRootView>
-    </Modal>
+        </Animated.View>
+      </PanGestureHandler>
+    </View>
   );
 };
 
 export default NotificationModal;
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.85)",
+  container: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.9)",
     justifyContent: "center",
+    alignItems: "center",
   },
-  popup: {
+  modalContainer: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "#1a1a1a",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  handle: {
+    width: 40,
+    height: 5,
+    backgroundColor: "#666",
+    borderRadius: 3,
+    alignSelf: "center",
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  content: {
     flex: 1,
-    paddingTop: 60,
-    paddingHorizontal: 20,
+    padding: 20,
   },
   headerButtons: {
     position: "absolute",
-    top: 20,
-    right: 20,
+    right: 10,
     flexDirection: "row",
     zIndex: 10,
   },
   iconButton: {
     marginLeft: 12,
     padding: 8,
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
+    borderRadius: 20,
   },
-  scroll: {
+  disabledButton: {
+    opacity: 0.5,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
     flexGrow: 1,
-    alignItems: "center",
     justifyContent: "center",
-    paddingBottom: 40,
+    alignItems: "center",
+    paddingTop: 40,
   },
   imageContainer: {
     width: "100%",
@@ -261,13 +392,37 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     marginBottom: 20,
   },
-  loader: {
+  loaderContainer: {
     position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    justifyContent: "center",
+    alignItems: "center",
     zIndex: 2,
+  },
+  loadingText: {
+    color: "#fff",
+    marginTop: 10,
+    fontSize: 14,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#333",
+  },
+  errorText: {
+    color: "#666",
+    marginTop: 10,
+    fontSize: 14,
   },
   image: {
     width: "100%",
     height: "100%",
+    resizeMode: "contain",
   },
   title: {
     fontSize: 22,
@@ -275,10 +430,28 @@ const styles = StyleSheet.create({
     color: "#fff",
     textAlign: "center",
     marginBottom: 10,
+    ...Platform.select({
+      ios: {
+        fontFamily: 'System',
+      },
+      android: {
+        fontFamily: 'sans-serif-medium',
+      },
+    }),
   },
   body: {
     fontSize: 16,
     color: "#ccc",
     textAlign: "center",
+    lineHeight: 24,
+    paddingHorizontal: 10,
+    ...Platform.select({
+      ios: {
+        fontFamily: 'System',
+      },
+      android: {
+        fontFamily: 'sans-serif',
+      },
+    }),
   },
 });

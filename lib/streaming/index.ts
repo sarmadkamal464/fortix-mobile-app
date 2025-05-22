@@ -13,6 +13,7 @@ const useFetchStreams = (setState: any) => {
         `/streaming?page=${page}&limit=${limit}`
       );
 
+      console.log("stream response", response.data);
       setState({
         streams: response.data?.data?.streams || [],
         pagination: response.data?.data?.pagination || {},
