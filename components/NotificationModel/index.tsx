@@ -23,7 +23,8 @@ import {
   PinchGestureHandlerGestureEvent,
   TapGestureHandlerGestureEvent,
 } from "react-native-gesture-handler";
-import Animated, {
+import Animated,
+{
   useSharedValue,
   useAnimatedStyle,
   useAnimatedGestureHandler,
@@ -35,12 +36,12 @@ import Animated, {
 } from "react-native-reanimated";
 import { useToast } from "@/lib/utils/toast";
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 interface NotificationModalProps {
   visible: boolean;
   onClose: () => void;
-  imageUrl?: string;
+  imageUrls?: string[];
   title?: string | null;
   body?: string | null;
 }
@@ -48,7 +49,7 @@ interface NotificationModalProps {
 const NotificationModal: React.FC<NotificationModalProps> = ({
   visible,
   onClose,
-  imageUrl,
+  imageUrls = [],
   title,
   body,
 }) => {
@@ -57,6 +58,7 @@ const NotificationModal: React.FC<NotificationModalProps> = ({
   const [downloading, setDownloading] = useState(false);
   const { successToast, errorToast } = useToast();
   const insets = useSafeAreaInsets();
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   // Animation values
   const translateY = useSharedValue(-SCREEN_HEIGHT);
@@ -67,13 +69,11 @@ const NotificationModal: React.FC<NotificationModalProps> = ({
   const translateX = useSharedValue(0);
   const translateYImage = useSharedValue(0);
 
-  // Reset states when imageUrl changes
+  // Reset states when image changes
   useEffect(() => {
-    if (imageUrl) {
-      setLoading(true);
-      setImageError(false);
-    }
-  }, [imageUrl]);
+    setLoading(true);
+    setImageError(false);
+  }, [currentIndex, imageUrls && imageUrls.length > 0 ? imageUrls.join() : ""]);
 
   useEffect(() => {
     if (visible) {
@@ -227,23 +227,26 @@ const NotificationModal: React.FC<NotificationModalProps> = ({
   if (!visible) return null;
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, { paddingTop: insets.top }]}> 
       <PanGestureHandler onGestureEvent={panGestureHandler}>
         <Animated.View style={[styles.modalContainer, animatedStyle]}>
           <View style={styles.handle} />
-          <View style={[styles.content, { paddingBottom: insets.bottom }]}>
-            <View style={[styles.headerButtons, { top: insets.top + 10 }]}>
-              {imageUrl && !imageError && (
+          <View style={[styles.content, { paddingBottom: insets.bottom }]}> 
+            <View style={[styles.headerButtons, { top: insets.top + 10 }]}> 
+              {imageUrls.length > 0 && !imageError && (
                 <Pressable
                   style={[styles.iconButton, downloading && styles.disabledButton]}
-                  onPress={() => !downloading && handleDownload(imageUrl)}
+                  onPress={() => !downloading && handleDownload(imageUrls[currentIndex])}
                   disabled={downloading}
                 >
                   {downloading ? (
                     <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <Ionicons name="download" size={26} color="#fff" />
-                  )}
+                 ) : ( 
+                    <View style={{ flexDirection: "column", alignItems: "center", justifyContent: "center", width: "100%" }}>
+                      <Ionicons name="download" size={26} color="#fff" />
+                      <Text style={{ color: "#fff", fontSize: 12 }}>Download All</Text>
+                    </View>
+                   )}
                 </Pressable>
               )}
               <Pressable 
@@ -263,53 +266,74 @@ const NotificationModal: React.FC<NotificationModalProps> = ({
               ]}
               showsVerticalScrollIndicator={false}
             >
-              {imageUrl && (
-                <TapGestureHandler
-                  numberOfTaps={2}
-                  maxDelayMs={250}
-                  onGestureEvent={onDoubleTap}
-                >
-                  <Animated.View>
-                    <PanGestureHandler onGestureEvent={panHandler}>
-                      <Animated.View>
-                        <PinchGestureHandler onGestureEvent={pinchHandler}>
-                          <Animated.View
-                            style={[styles.imageContainer, imageAnimatedStyle]}
-                          >
-                            {loading && (
-                              <View style={styles.loaderContainer}>
-                                <ActivityIndicator
-                                  size="large"
-                                  color="#fff"
+              {imageUrls.length > 0 && (
+                <>
+                  <TapGestureHandler
+                    numberOfTaps={2}
+                    maxDelayMs={250}
+                    onGestureEvent={onDoubleTap}
+                  >
+                    <Animated.View>
+                      <PanGestureHandler onGestureEvent={panHandler}>
+                        <Animated.View>
+                          <PinchGestureHandler onGestureEvent={pinchHandler}>
+                            <Animated.View
+                              style={[styles.imageContainer, imageAnimatedStyle]}
+                            >
+                              {loading && (
+                                <View style={styles.loaderContainer}>
+                                  <ActivityIndicator
+                                    size="large"
+                                    color="#fff"
+                                  />
+                                  <Text style={styles.loadingText}>Loading image...</Text>
+                                </View>
+                              )}
+                              {imageError ? (
+                                <View style={styles.errorContainer}>
+                                  <Ionicons name="image-outline" size={40} color="#666" />
+                                  <Text style={styles.errorText}>Failed to load image</Text>
+                                </View>
+                              ) : (
+                                <Image
+                                  source={{ uri: imageUrls[currentIndex] }}
+                                  style={styles.image}
+                                  resizeMode="contain"
+                                  onLoadEnd={() => setLoading(false)}
+                                  onError={() => {
+                                    setLoading(false);
+                                    setImageError(true);
+                                  }}
                                 />
-                                <Text style={styles.loadingText}>Loading image...</Text>
-                              </View>
-                            )}
-                            {imageError ? (
-                              <View style={styles.errorContainer}>
-                                <Ionicons name="image-outline" size={40} color="#666" />
-                                <Text style={styles.errorText}>Failed to load image</Text>
-                              </View>
-                            ) : (
-                              <Image
-                                source={{ uri: imageUrl }}
-                                style={styles.image}
-                                resizeMode="contain"
-                                onLoadEnd={() => setLoading(false)}
-                                onError={() => {
-                                  setLoading(false);
-                                  setImageError(true);
-                                }}
-                              />
-                            )}
-                          </Animated.View>
-                        </PinchGestureHandler>
-                      </Animated.View>
-                    </PanGestureHandler>
-                  </Animated.View>
-                </TapGestureHandler>
+                              )}
+                            </Animated.View>
+                          </PinchGestureHandler>
+                        </Animated.View>
+                      </PanGestureHandler>
+                    </Animated.View>
+                  </TapGestureHandler>
+                  {/* Image navigation controls */}
+                  {imageUrls.length > 1 && (
+                    <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 10 }}>
+                      <Pressable
+                        onPress={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
+                        disabled={currentIndex === 0}
+                        style={{ opacity: currentIndex === 0 ? 0.5 : 1, marginHorizontal: 10 }}
+                      >
+                        <Ionicons name="chevron-back" size={32} color="#fff" />
+                      </Pressable>
+                      <Text style={{ color: '#fff', fontSize: 16 }}>{currentIndex + 1} / {imageUrls.length}</Text>
+                      <Pressable
+                        onPress={() => setCurrentIndex((prev) => Math.min(imageUrls.length - 1, prev + 1))}
+                        disabled={currentIndex === imageUrls.length - 1}
+                        style={{ opacity: currentIndex === imageUrls.length - 1 ? 0.5 : 1, marginHorizontal: 10 }}
+                      >
+                        <Ionicons name="chevron-forward" size={32} color="#fff" />
+                      </Pressable>
+                    </View>
+                  )}
+                </>
               )}
-
               {title && <Text style={styles.title}>{title}</Text>}
               {body && <Text style={styles.body}>{body}</Text>}
             </ScrollView>

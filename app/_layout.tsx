@@ -38,13 +38,26 @@ export default function RootLayout() {
   const [popupData, setPopupData] = useState<{
     title?: string | null;
     body?: string | null;
-    imageUrl?: string;
+    imageUrls?: string[];
   }>({});
 
   const showPopup = (notification: Notifications.Notification) => {
     const { title, body, data } = notification.request.content;
-    const imageUrl = (data as any).image_url;
-    setPopupData({ title, body, imageUrl });
+    let imageUrls: string[] = [];
+
+    // Try to get image_urls directly
+    if (Array.isArray((data as any).image_urls)) {
+      imageUrls = (data as any).image_urls;
+    } else if (typeof (data as any).body === 'string') {
+      // Try to parse image_urls from JSON string in body
+      try {
+        const bodyObj = JSON.parse((data as any).body);
+        if (Array.isArray(bodyObj.image_urls)) {
+          imageUrls = bodyObj.image_urls;
+        }
+      } catch {}
+    }
+    setPopupData({ title, body, imageUrls });
     setModalVisible(true);
   };
 
@@ -113,7 +126,7 @@ export default function RootLayout() {
           <NotificationModal
             visible={modalVisible}
             onClose={() => setModalVisible(false)}
-            imageUrl={popupData.imageUrl}
+            imageUrls={popupData.imageUrls}
             title={popupData.title}
             body={popupData.body}
           />
