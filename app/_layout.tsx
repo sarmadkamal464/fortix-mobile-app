@@ -1,14 +1,40 @@
+import React, { useEffect, useRef, useState } from "react";
+import * as Notifications from "expo-notifications";
+import * as SplashScreen from "expo-splash-screen";
+import { ToastProvider } from "@/lib/utils/toast";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Stack } from "expo-router";
+import NotificationModal from "@/components/NotificationModel";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { Platform } from "react-native";
+
+// Prevent splash from auto-hiding
+SplashScreen.preventAutoHideAsync();
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+    priority: Notifications.AndroidNotificationPriority.HIGH,
+  }),
+});
+
+// Configure notification channel for Android
+if (Platform.OS === 'android') {
+  Notifications.setNotificationChannelAsync('default', {
+    name: 'default',
+    importance: Notifications.AndroidImportance.MAX,
+    vibrationPattern: [0, 250, 250, 250],
+    lightColor: '#FF231F7C',
+  });
+}
 
 export default function RootLayout() {
-<<<<<<< Updated upstream
-  return <Stack />;
-=======
   const notificationListener = useRef<Notifications.Subscription>();
   const responseListener = useRef<Notifications.Subscription>();
 
   const [appIsReady, setAppIsReady] = useState(false);
-  const [modalVisible, setModalVisible] = useState(true);
+  const [modalVisible, setModalVisible] = useState(false);
   const [popupData, setPopupData] = useState<{
     title?: string | null;
     body?: string | null;
@@ -108,5 +134,4 @@ export default function RootLayout() {
       </GestureHandlerRootView>
     </SafeAreaProvider>
   );
->>>>>>> Stashed changes
 }
