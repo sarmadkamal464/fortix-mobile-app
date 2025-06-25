@@ -53,6 +53,7 @@ export const useAuth = () => {
         //router.replace("/(tabs)"); // Or '/dashboard' if that's the destination
       }
     } catch (error: any) {
+      console.log("Login failed", JSON.stringify(error));
       errorToast(error?.response?.data?.message || "Login failed");
     } finally {
       setLoading(false);

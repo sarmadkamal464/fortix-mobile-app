@@ -18,7 +18,7 @@
     },
     "production": {
       "android": {
-        "buildType": "apk"
+        "buildType": "app-bundle"
       },
       "ios": {
         "simulator": false
@@ -33,5 +33,8 @@
         "appleTeamId": "YOUR_APPLE_TEAM_ID"
       }
     }
+  },
+  "cli": {
+    "appVersionSource": "remote"
   }
 }

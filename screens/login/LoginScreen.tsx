@@ -12,6 +12,7 @@ import {
   Alert,
   ActivityIndicator,
   Image,
+  Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons"; // For the eye icon
 
@@ -24,7 +25,7 @@ const LoginScreen = () => {
   const [usernameError, setUsernameError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const device_token = usePushToken();
-   console.log("Device Token", device_token)
+ 
 
   const validateInputs = () => {
     let isValid = true;
@@ -52,16 +53,28 @@ const LoginScreen = () => {
   const handleLogin = async () => {
     if (!validateInputs()) return;
 
-    if (!device_token) {
+    if (!device_token && Platform.OS === 'android') {
       setUsernameError("");
       setPasswordError("Push token not ready yet. Please try again later.");
+      Alert.alert('Notification Permission', 'Please enable notification permission for receiving violation alerts',[
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Open Settings',
+          onPress: () => {
+            Linking.openSettings();
+          },
+        },
+      ]);
       return;
     }
 
-    await authLogin({ username, password, device_token });
+    await authLogin({ username, password, device_token: device_token ?? "" });
   };
 
-  const isLoginDisabled = !username || !password || !device_token;
+  const isLoginDisabled = !username || !password 
 
   return (
     <KeyboardAvoidingView
@@ -116,11 +129,11 @@ const LoginScreen = () => {
       ) : null}
 
       {/* Device Token Message */}
-      {device_token === null && (
+      {/* {device_token === null && (
         <Text style={{ color: "gray", marginBottom: 10 }}>
           Preparing device for notifications...
         </Text>
-      )}
+      )} */}
 
       {/* Login Button */}
       <TouchableOpacity

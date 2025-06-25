@@ -13,6 +13,7 @@ const axiosInstance = axios.create({
 // Request interceptor
 axiosInstance.interceptors.request.use(
   async (config) => {
+    console.log("config", process.env.EXPO_PUBLIC_API_URL);
     const token = await SecureStore.getItemAsync("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
