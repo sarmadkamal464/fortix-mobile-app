@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import * as Notifications from "expo-notifications";
 import { ToastProvider } from "@/lib/utils/toast";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { Stack } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import NotificationModal from "@/components/NotificationModel";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -17,18 +17,20 @@ Notifications.setNotificationHandler({
 export default function RootLayout() {
   const notificationListener = useRef<Notifications.Subscription>();
   const responseListener = useRef<Notifications.Subscription>();
-
+  const router = useRouter();
   const [modalVisible, setModalVisible] = useState(false);
   const [popupData, setPopupData] = useState<{
     title?: string | null;
     body?: string | null;
     imageUrl?: string;
+    alert_id?: string;
   }>({});
 
   const showPopup = (notification: Notifications.Notification) => {
     const { title, body, data } = notification.request.content;
     const imageUrl = (data as any).image_url;
-    setPopupData({ title, body, imageUrl });
+    const alert_id = (data as any).alert_id;
+    setPopupData({ title, body, imageUrl, alert_id });
     setModalVisible(true);
   };
 
@@ -50,6 +52,7 @@ export default function RootLayout() {
       const lastNotificationResponse =
         await Notifications.getLastNotificationResponseAsync();
       if (lastNotificationResponse) {
+        await router.push(`/alertdetails?id=${lastNotificationResponse.notification.request.content.data.alert_id}`)
         showPopup(lastNotificationResponse.notification);
       }
     })();
@@ -74,6 +77,7 @@ export default function RootLayout() {
             imageUrl={popupData.imageUrl}
             title={popupData.title}
             body={popupData.body}
+            alert_id={popupData.alert_id}
           />
         </ToastProvider>
       </GestureHandlerRootView>

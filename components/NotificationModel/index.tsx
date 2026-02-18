@@ -8,6 +8,7 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
+  Button,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as FileSystem from "expo-file-system";
@@ -28,6 +29,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { useToast } from "@/lib/utils/toast";
+import { useRouter } from "expo-router";
 
 interface NotificationModalProps {
   visible: boolean;
@@ -35,6 +37,7 @@ interface NotificationModalProps {
   imageUrl?: string;
   title?: string | null;
   body?: string | null;
+  alert_id?: string;
 }
 
 const NotificationModal: React.FC<NotificationModalProps> = ({
@@ -43,7 +46,9 @@ const NotificationModal: React.FC<NotificationModalProps> = ({
   imageUrl,
   title,
   body,
+  alert_id,
 }) => {
+  const router = useRouter()
   const [loading, setLoading] = useState(true);
   const { successToast, errorToast } = useToast();
 
@@ -213,6 +218,10 @@ const NotificationModal: React.FC<NotificationModalProps> = ({
 
               {title && <Text style={styles.title}>{title}</Text>}
               {body && <Text style={styles.body}>{body}</Text>}
+              <Button title="View Alert" onPress={() => {
+                router.push(`/alertdetails?id=${alert_id}`)
+                onClose();
+              }} />
             </ScrollView>
           </View>
         </View>
