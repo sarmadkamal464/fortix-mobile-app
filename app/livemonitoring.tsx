@@ -60,9 +60,7 @@ export default function LiveMonitoringScreen() {
   const getStreamUrl = useCallback((stream: Stream) => {
     // Prefer model_url from business case if available (may already include pod / base URL)
     const modelUrl =
-      ((stream as any).business_case?.model_url as string | undefined) ||
-      (process.env.EXPO_FAST_PUBLIC_API_URL as string | undefined) ||
-      "http://127.0.0.1:8000/";
+      ((stream as any).business_case?.model_url as string);
 
     const base = modelUrl.endsWith("/") ? modelUrl : `${modelUrl}/`;
 
