@@ -87,11 +87,9 @@ export default function RootLayout() {
     };
   }, []);
 
-  const onLayoutRootView = useCallback(async () => {
+  useEffect(() => {
     if (appIsReady) {
-      // This tells the splash screen to hide immediately! Only call this after
-      // the app has rendered its first pixels.
-      await SplashScreen.hideAsync();
+      SplashScreen.hideAsync();
     }
   }, [appIsReady]);
 
@@ -102,13 +100,15 @@ export default function RootLayout() {
   if (!splashAnimationFinished) {
     return (
       <AnimatedSplashScreen
-        onAnimationFinish={() => setSplashAnimationFinished(true)}
+        onAnimationFinish={() => {
+          setSplashAnimationFinished(true);
+        }}
       />
     );
   }
 
   return (
-    <SafeAreaProvider onLayout={onLayoutRootView}>
+    <SafeAreaProvider>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <ToastProvider>
           <Stack />
