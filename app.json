@@ -17,6 +17,7 @@
       }
     },
     "android": {
+      "usesCleartextTraffic": true,
       "permissions": [
         "MEDIA_LIBRARY",
         "WRITE_EXTERNAL_STORAGE",

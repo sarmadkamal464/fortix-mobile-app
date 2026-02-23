@@ -1,5 +1,5 @@
 // components/LiveStreamPlayer.tsx
-import React, { useRef, useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   Dimensions,
   ScaledSize,
 } from "react-native";
-import { Video, ResizeMode } from "expo-av";
+import { WebView } from "react-native-webview";
 import { Ionicons } from "@expo/vector-icons";
 import * as ScreenOrientation from "expo-screen-orientation";
 import {
@@ -32,8 +32,71 @@ type Props = {
   showLiveOnlineTag?: boolean;
   timestampTop?: boolean;
   showBusinessCaseLabel?: boolean;
-  showCameraID?: boolean
+  showCameraID?: boolean;
 };
+
+/** Build the HLS.js HTML player injected into WebView */
+function buildHlsHtml(streamUrl: string): string {
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; background: #000; overflow: hidden; }
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #000;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <video id="video" autoplay playsinline muted="false"></video>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js"></script>
+  <script>
+    var video = document.getElementById('video');
+    var src = ${JSON.stringify(streamUrl)};
+
+    function startPlayer(url) {
+      if (Hls.isSupported()) {
+        var hls = new Hls({
+          enableWorker: false,
+          lowLatencyMode: true,
+          backBufferLength: 90,
+          xhrSetup: function(xhr) {
+            xhr.setRequestHeader('Cache-Control', 'no-cache');
+            xhr.setRequestHeader('Pragma', 'no-cache');
+          }
+        });
+        hls.loadSource(url);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, function() {
+          video.play().catch(function(){});
+          window.ReactNativeWebView && window.ReactNativeWebView.postMessage('ready');
+        });
+        hls.on(Hls.Events.ERROR, function(event, data) {
+          if (data.fatal) {
+            window.ReactNativeWebView && window.ReactNativeWebView.postMessage('error:' + data.type);
+          }
+        });
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        // Native HLS (iOS Safari)
+        video.src = url;
+        video.addEventListener('loadedmetadata', function() {
+          video.play().catch(function(){});
+          window.ReactNativeWebView && window.ReactNativeWebView.postMessage('ready');
+        });
+      }
+    }
+
+    startPlayer(src);
+  </script>
+</body>
+</html>`;
+}
 
 export default function LiveStreamPlayer({
   stream,
@@ -44,18 +107,35 @@ export default function LiveStreamPlayer({
   showLiveOnlineTag = true,
   timestampTop = false,
   showBusinessCaseLabel = true,
-  showCameraID = false
+  showCameraID = false,
 }: Props) {
-  const videoRef = useRef<Video>(null);
+  const isOnline = stream.status === "active";
+  const isLive = stream.status === "active";
+  const businessCaseType = stream.business_case?.name || "UNKNOWN";
+  const siteName = stream.video_source?.name || "Unknown Site";
+  const locationInfo = `Site ${stream?.site?.name || ""}`;
+
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [dimensions, setDimensions] = useState<ScaledSize>(
     Dimensions.get("window")
   );
   const [isBuffering, setIsBuffering] = useState(true);
-  const [hasError, setHasError] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
 
   const scale = useSharedValue(1);
+  const webViewKey = useRef(0); // increment to force WebView remount on URL change
+  const lastStreamUrl = useRef<string | null>(null);
+
+  // Remount WebView when the base stream path changes
+  const getBasePath = (url: string) => url.split("?")[0];
+  if (
+    streamUrl &&
+    lastStreamUrl.current !== null &&
+    getBasePath(streamUrl) !== getBasePath(lastStreamUrl.current)
+  ) {
+    webViewKey.current += 1;
+  }
+  if (streamUrl) lastStreamUrl.current = streamUrl;
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -74,12 +154,6 @@ export default function LiveStreamPlayer({
     return `${month}/${day}/${year} ${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
   };
 
-  const businessCaseType = stream.business_case?.name || "UNKNOWN";
-  const isOnline = stream.status === "active";
-  const isLive = stream.status === "active"; 
-  const siteName = stream.video_source?.name || "Unknown Site";
-  const locationInfo = `Site ${stream?.site?.name ||""}`;
-
   const onPinchEvent = (event: PinchGestureHandlerGestureEvent) => {
     scale.value = event.nativeEvent.scale;
   };
@@ -97,10 +171,7 @@ export default function LiveStreamPlayer({
   };
 
   useEffect(() => {
-    const subscription = Dimensions.addEventListener(
-      "change",
-      updateDimensions
-    );
+    const subscription = Dimensions.addEventListener("change", updateDimensions);
     return () => subscription?.remove();
   }, []);
 
@@ -125,95 +196,142 @@ export default function LiveStreamPlayer({
   const videoWidth = isFullscreen ? width : width;
   const videoHeight = isFullscreen ? height : width * (9 / 16);
 
+  // Derive the stream server origin for baseUrl (fixes CORS on Android WebView)
+  const streamBaseUrl = streamUrl
+    ? (() => {
+      try {
+        const u = new URL(streamUrl);
+        return `${u.protocol}//${u.host}`;
+      } catch {
+        return undefined;
+      }
+    })()
+    : undefined;
+
+  const hlsHtml =
+    isOnline && streamUrl ? buildHlsHtml(streamUrl) : null;
+
   return (
-    <Pressable
-      style={styles.cardContainer}
-    >
-    <View style={styles.videoContainer}>
-      <PinchGestureHandler onGestureEvent={onPinchEvent} onEnded={onPinchEnd}>
-        <Animated.View
-          style={[
-            styles.animatedContainer,
-            { width: videoWidth, height: videoHeight },
-            animatedStyle,
-          ]}
-        >
-          {stream.status == "active" && streamUrl && <Video
-            ref={videoRef}
-            source={{ uri: streamUrl }}
-            useNativeControls
-            resizeMode={ResizeMode.CONTAIN}
-            shouldPlay
-            isMuted={false}
-            style={{ width: videoWidth, height: videoHeight }}
-            onError={(error) => {
-              setHasError(true)
-            }}
-            onLoadStart={() => {
-              setHasError(false);
-              setIsBuffering(true);
-            }}
-            onReadyForDisplay={() => setIsBuffering(false)}
-          />}
+    <Pressable style={styles.cardContainer}>
+      <View style={styles.videoContainer}>
+        <PinchGestureHandler onGestureEvent={onPinchEvent} onEnded={onPinchEnd}>
+          <Animated.View
+            style={[
+              styles.animatedContainer,
+              { width: videoWidth, height: videoHeight },
+              animatedStyle,
+            ]}
+          >
+            {/* HLS.js WebView player */}
+            {isOnline && hlsHtml ? (
+              <WebView
+                key={webViewKey.current}
+                source={{ html: hlsHtml, baseUrl: streamBaseUrl }}
+                style={{ width: videoWidth, height: videoHeight, backgroundColor: "#000" }}
+                originWhitelist={["*"]}
+                allowsInlineMediaPlayback
+                mediaPlaybackRequiresUserAction={false}
+                javaScriptEnabled
+                domStorageEnabled
+                mixedContentMode="always"
+                onMessage={(event) => {
+                  const msg = event.nativeEvent.data;
+                  if (msg === "ready") {
+                    setIsBuffering(false);
+                  } else if (msg.startsWith("error:")) {
+                    console.log("HLS ERROR:", msg);
+                    setIsBuffering(false);
+                  }
+                }}
+                onLoadStart={() => setIsBuffering(true)}
+                onLoadEnd={() => {
+                  // WebView loaded — actual stream ready fires via postMessage
+                }}
+                onError={(e) => {
+                  console.log("WEBVIEW ERROR:", e.nativeEvent);
+                  setIsBuffering(false);
+                }}
+                scrollEnabled={false}
+                bounces={false}
+                overScrollMode="never"
+                showsHorizontalScrollIndicator={false}
+                showsVerticalScrollIndicator={false}
+              />
+            ) : null}
 
             {/* Business Case Label - Top Left */}
-            {showBusinessCaseLabel && <View style={styles.businessCaseLabel}>
-              <Text style={styles.businessCaseText}>{businessCaseType}</Text>
-            </View>}
+            {showBusinessCaseLabel && (
+              <View style={styles.businessCaseLabel}>
+                <Text style={styles.businessCaseText}>{businessCaseType}</Text>
+              </View>
+            )}
 
             {/* Status Indicators - Top Right */}
-            {showLiveOnlineTag && <View style={styles.statusContainer}>
-              {isLive && (
-                <View style={styles.liveIndicator}>
-                  <View style={styles.liveDot} />
-                  <Text style={styles.liveText}>LIVE</Text>
-                </View>
-              )}
-              {isOnline && (
-                <View style={styles.onlineIndicator}>
-                  <Text style={styles.onlineText}>ONLINE</Text>
-                </View>
-              )}
-            </View>}
+            {showLiveOnlineTag && (
+              <View style={styles.statusContainer}>
+                {isLive && (
+                  <View style={styles.liveIndicator}>
+                    <View style={styles.liveDot} />
+                    <Text style={styles.liveText}>LIVE</Text>
+                  </View>
+                )}
+                {isOnline && (
+                  <View style={styles.onlineIndicator}>
+                    <Text style={styles.onlineText}>ONLINE</Text>
+                  </View>
+                )}
+              </View>
+            )}
 
             {/* Timestamp - Bottom Left */}
-            <View style={[styles.timestampContainer, timestampTop && styles.timestampTop]}>
-              <Text style={styles.timestampText}>{formatTimestamp(currentTime)}</Text>
+            <View
+              style={[
+                styles.timestampContainer,
+                timestampTop && styles.timestampTop,
+              ]}
+            >
+              <Text style={styles.timestampText}>
+                {formatTimestamp(currentTime)}
+              </Text>
             </View>
 
-            {showCameraID && <View style={styles.cameraCaseLabel}>
-              <Text style={styles.cameraCaseText}>Camera ID: {stream.video_source.id}</Text>
-            </View>}
+            {showCameraID && (
+              <View style={styles.cameraCaseLabel}>
+                <Text style={styles.cameraCaseText}>
+                  Camera ID: {stream.video_source.id}
+                </Text>
+              </View>
+            )}
 
-            {isBuffering && stream.status == "active" && (
+            {/* Loading spinner while stream initialises */}
+            {isBuffering && isOnline && (
               <View style={styles.loaderOverlay}>
                 <ActivityIndicator size="large" color="#fff" />
               </View>
             )}
-            {stream.status == "inactive" && (
+
+            {/* Inactive overlay */}
+            {stream.status === "inactive" && (
               <View style={styles.inactiveOverlay}>
                 <Text style={styles.inactiveText}>Stream is inactive</Text>
               </View>
             )}
-            {/* {hasError && stream.status == "active" && (
-              <View style={styles.errorOverlay}>
-                <Text style={styles.errorText}>Failed to load stream</Text>
-              </View>
-            )} */}
           </Animated.View>
         </PinchGestureHandler>
 
-        {/* Fullscreen Button - Bottom Right of Video */}
-        {isExpand && <Pressable
-          style={styles.fullscreenButton}
-          onPress={handleToggleFullscreen}
-        >
-          <Ionicons
-            name={isFullscreen ? "contract-outline" : "expand-outline"}
-            size={24}
-            color="white"
-          />
-        </Pressable>}
+        {/* Fullscreen Button */}
+        {isExpand && (
+          <Pressable
+            style={styles.fullscreenButton}
+            onPress={handleToggleFullscreen}
+          >
+            <Ionicons
+              name={isFullscreen ? "contract-outline" : "expand-outline"}
+              size={24}
+              color="white"
+            />
+          </Pressable>
+        )}
       </View>
 
       {/* Card Details Below Video */}
@@ -255,6 +373,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     position: "relative",
+    overflow: "hidden",
   },
   businessCaseLabel: {
     position: "absolute",
@@ -322,7 +441,6 @@ const styles = StyleSheet.create({
   },
   onlineIndicator: {
     backgroundColor: "#00BCD4",
-    color: "#000",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 4,
@@ -344,6 +462,7 @@ const styles = StyleSheet.create({
   },
   timestampTop: {
     top: 12,
+    bottom: undefined,
   },
   timestampText: {
     color: "#fff",
@@ -356,17 +475,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "rgba(0,0,0,0.4)",
     zIndex: 5,
-  },
-  errorOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(255,0,0,0.3)",
-    zIndex: 5,
-  },
-  errorText: {
-    color: "#fff",
-    fontWeight: "bold",
   },
   inactiveOverlay: {
     ...StyleSheet.absoluteFillObject,

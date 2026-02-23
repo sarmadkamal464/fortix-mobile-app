@@ -14,9 +14,11 @@ import {
   Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import FortixLogo from "@/assets/images/fortix-logo.png"
 
 const LoginScreen = () => {
+  const router = useRouter();
   const { loading, require2FA, login: authLogin, verify2FA } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -54,11 +56,11 @@ const LoginScreen = () => {
     >
       <View style={styles.content}>
         <View style={styles.header}>
-            <Image
-              source={FortixLogo}
-              style={styles.logoImage}
-              resizeMode="contain"
-            />
+          <Image
+            source={FortixLogo}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
 
           <View style={styles.headingBlock}>
             <Text style={styles.title}>Welcome back.</Text>
@@ -148,7 +150,7 @@ const LoginScreen = () => {
               <Text style={styles.rememberMeText}>Remember me</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity activeOpacity={0.8}>
+            <TouchableOpacity activeOpacity={0.8} onPress={() => router.push("/forgot-password")}>
               <Text style={styles.forgotPasswordText}>
                 FORGOT YOUR PASSWORD?
               </Text>
