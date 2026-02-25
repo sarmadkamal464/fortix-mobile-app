@@ -358,6 +358,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#1a1a1a",
     borderRadius: 12,
     marginBottom: 20,
+    marginHorizontal: 16,
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "#333",
@@ -378,7 +379,7 @@ const styles = StyleSheet.create({
   businessCaseLabel: {
     position: "absolute",
     top: 12,
-    left: 20,
+    left: 25,
     backgroundColor: "#000",
     borderWidth: 1,
     borderColor: "#00BCD4",
@@ -396,7 +397,7 @@ const styles = StyleSheet.create({
   cameraCaseLabel: {
     position: "absolute",
     bottom: 12,
-    left: 20,
+    left: 25,
     backgroundColor: "#000",
     borderWidth: 0.5,
     borderColor: "#00BCD4",
@@ -413,7 +414,7 @@ const styles = StyleSheet.create({
   statusContainer: {
     position: "absolute",
     top: 12,
-    right: 20,
+    right: 25,
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
