@@ -1,11 +1,12 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import * as Notifications from "expo-notifications";
 import * as SplashScreen from "expo-splash-screen";
 import { ToastProvider } from "@/lib/utils/toast";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { Stack } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import NotificationModal from "@/components/NotificationModel";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import AnimatedSplashScreen from "@/components/AnimatedSplashScreen";
 import { Platform } from "react-native";
 
 // Prevent splash from auto-hiding
@@ -32,55 +33,43 @@ if (Platform.OS === 'android') {
 export default function RootLayout() {
   const notificationListener = useRef<Notifications.Subscription>();
   const responseListener = useRef<Notifications.Subscription>();
-
-  const [appIsReady, setAppIsReady] = useState(false);
+  const router = useRouter();
   const [modalVisible, setModalVisible] = useState(false);
+  const [appIsReady, setAppIsReady] = useState(false);
+  const [splashAnimationFinished, setSplashAnimationFinished] = useState(false);
   const [popupData, setPopupData] = useState<{
     title?: string | null;
     body?: string | null;
-    imageUrls?: string[];
+    imageUrl?: string;
+    alert_id?: string;
   }>({});
 
   const showPopup = (notification: Notifications.Notification) => {
     const { title, body, data } = notification.request.content;
-    let imageUrls: string[] = [];
-
-    // Try to get image_urls directly
-    if (Array.isArray((data as any).image_urls)) {
-      imageUrls = (data as any).image_urls;
-    } else if (typeof (data as any).body === 'string') {
-      // Try to parse image_urls from JSON string in body
-      try {
-        const bodyObj = JSON.parse((data as any).body);
-        if (Array.isArray(bodyObj.image_urls)) {
-          imageUrls = bodyObj.image_urls;
-        }
-      } catch {}
-    }
-    setPopupData({ title, body, imageUrls });
+    const imageUrl = (data as any).image_url;
+    const alert_id = (data as any).alert_id;
+    setPopupData({ title, body, imageUrl, alert_id });
     setModalVisible(true);
   };
 
   // Add effect to monitor modal state changes
   useEffect(() => {
-    console.log("Modal visibility changed:", modalVisible);
-  }, [modalVisible]);
-
-  useEffect(() => {
     async function prepare() {
       try {
-        // Simulate loading tasks (e.g., fonts, API, etc.)
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        // Pre-load fonts, make any API calls you need to do here
+        // For now, we simulate a small delay or just wait for the layout to be ready
+        await new Promise(resolve => setTimeout(resolve, 1000));
       } catch (e) {
         console.warn(e);
       } finally {
+        // Tell the application to render
         setAppIsReady(true);
-        await SplashScreen.hideAsync(); // Hide splash screen
       }
     }
 
     prepare();
 
+    // 1. Listen while app is running
     notificationListener.current =
       Notifications.addNotificationReceivedListener((notification) => {
         console.log("Notification received in foreground:", notification);
@@ -96,6 +85,7 @@ export default function RootLayout() {
       const lastNotificationResponse =
         await Notifications.getLastNotificationResponseAsync();
       if (lastNotificationResponse) {
+        await router.push(`/alertdetails?id=${lastNotificationResponse.notification.request.content.data.alert_id}`)
         showPopup(lastNotificationResponse.notification);
       }
     })();
@@ -108,8 +98,24 @@ export default function RootLayout() {
     };
   }, []);
 
+  useEffect(() => {
+    if (appIsReady) {
+      SplashScreen.hideAsync();
+    }
+  }, [appIsReady]);
+
   if (!appIsReady) {
-    return null; // Prevent UI rendering until app is ready
+    return null;
+  }
+
+  if (!splashAnimationFinished) {
+    return (
+      <AnimatedSplashScreen
+        onAnimationFinish={() => {
+          setSplashAnimationFinished(true);
+        }}
+      />
+    );
   }
 
   return (
@@ -126,9 +132,10 @@ export default function RootLayout() {
           <NotificationModal
             visible={modalVisible}
             onClose={() => setModalVisible(false)}
-            imageUrls={popupData.imageUrls}
+            imageUrl={popupData.imageUrl}
             title={popupData.title}
             body={popupData.body}
+            alert_id={popupData.alert_id}
           />
         </ToastProvider>
       </GestureHandlerRootView>

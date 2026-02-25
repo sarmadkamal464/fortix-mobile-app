@@ -21,6 +21,7 @@
       }
     },
     "android": {
+      "usesCleartextTraffic": true,
       "permissions": [
         "MEDIA_LIBRARY",
         "WRITE_EXTERNAL_STORAGE",
@@ -42,7 +43,16 @@
     },
     "plugins": [
       "expo-router",
-      
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 1080,
+          "imageHeight": 1920,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ],
       "expo-secure-store",
       "expo-notifications"
     ],

@@ -36,10 +36,12 @@ export const useAuth = () => {
       if (data.token) {
         const token = data.token;
         const user = data.user;
+        const podId = data.userHasGPU?.pod_id || ""
         const expiryInDays = getTokenExpiryInDays(token);
 
         // Save token and user
         await SecureStore.setItemAsync("token", token);
+        await SecureStore.setItemAsync("podId", podId);
         await SecureStore.setItemAsync("role", user?.role ?? "");
         await AsyncStorage.setItem("user", JSON.stringify(user));
 

@@ -7,11 +7,13 @@ import {
   StyleSheet,
   Platform,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 const SplashScreen2 = () => {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
 
   const handleSkip = async () => {
@@ -25,7 +27,7 @@ const SplashScreen2 = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Top Section */}
       <View style={styles.topContainer}>
         <Image
@@ -69,7 +71,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 5,
-    paddingTop: Platform.OS === "ios" ? 30 : 0,
     backgroundColor: "#fff",
   },
   topContainer: {

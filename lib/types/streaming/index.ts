@@ -1,4 +1,6 @@
 import { PaginationState } from "@/lib/types/users";
+import { User } from "../auth";
+import { Site } from "../alarm";
 export interface StreamUser {
   id: number;
   username: string;
@@ -43,13 +45,46 @@ export interface Stream {
   created_at: string;
   updated_at: string;
   user: StreamUser;
+  site: Site,
+  site_id: number,
   business_case: StreamBusinessCase;
   configurations: StreamConfiguration[];
   video_source: StreamVideoSource;
 }
+export interface FilterOption {
+  id: number;
+  name: string;
+}
+
+export interface StreamFilters {
+  sites: FilterOption[];
+  businessCases: FilterOption[];
+}
+
 export interface StreamState {
   streams: Stream[];
   loading: boolean;
   error: string | null;
   pagination: PaginationState;
+  filters?: StreamFilters;
+  activeStreams: number,
+  inactiveStreams: number,
+}
+
+export interface UserHasAssignedGPU {
+  id?: number;
+  user_id: number;
+  user: User;
+  gpu_id: string;
+  pod_id: string;
+  own_gpu_id: number;
+  created_at?: string;
+}
+
+export interface RealTimePreviewFiltersQuery {
+  business_case_id?: number;
+  site_id?: number;
+  page?: number;
+  limit?: number;
+  search?: string;
 }
