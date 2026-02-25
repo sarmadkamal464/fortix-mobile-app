@@ -7,13 +7,17 @@ import {
   StyleSheet,
   Pressable,
   ActivityIndicator,
+  Platform,
+  Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import LogoutButton from "@/components/LogoutButton";
 import LiveStreamPlayer from "@/components/LiveStreamPlayer";
 import useFetchStreams from "@/lib/streaming";
 import { Stack } from "expo-router";
+import Header from "@/components/Header"; // Correct path to the Header component
 import { StreamState } from "@/lib/types/streaming"; // Correct path to the StreamState type
+import { usePushToken } from "@/lib/hooks/usePushToken";
 
 export default function LiveMonitoringScreen() {
   const [state, setState] = useState<StreamState>({
@@ -28,7 +32,10 @@ export default function LiveMonitoringScreen() {
     error: null,
   });
 
+  const device_token = usePushToken();
+
   const fetchStreams = useFetchStreams(setState);
+  const activeStreams = state.streams.filter(stream => stream.status === 'active');
 
   useEffect(() => {
     fetchStreams();
@@ -40,12 +47,8 @@ export default function LiveMonitoringScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen
-        options={{
-          title: "Live Monitoring",
-          headerBackVisible: false,
-          headerRight: () => <LogoutButton />,
-        }}
+      <Header 
+      title="Live Monitoring"
       />
       <View style={styles.header}>
         <Text style={styles.title}>Live Monitoring</Text>
@@ -60,12 +63,12 @@ export default function LiveMonitoringScreen() {
         </View>
       ) : (
         <FlatList
-          data={state.streams}
+          data={activeStreams}
           keyExtractor={(item) => item.id.toString()}
           renderItem={({ item }) => (
             <LiveStreamPlayer
               key={item.id}
-              streamUrl={`https://6eegczjj7onvbj-8000.proxy.runpod.net/streams/${item.id}/stream.m3u8`}
+              streamUrl={`${item.business_case?.model_url}streams/${item.id}/stream.m3u8`}
             />
           )}
           contentContainerStyle={{ paddingBottom: 20 }}
@@ -73,6 +76,23 @@ export default function LiveMonitoringScreen() {
           onRefresh={handleRefresh}
         />
       )}
+
+      {
+        !device_token && Platform.OS === 'ios' ? (
+          <View style={styles.permissionContainer}>
+            <Text>
+
+            <Text style={styles.permissionText}>Please enable notification permission for receiving violation alerts</Text>
+           {' '}
+            <Text style={[styles.permissionText, {color: "#007bff", textDecorationLine: "underline" }]} onPress={() => {
+              Linking.openSettings();
+            }}>
+              Grant Permission</Text>
+            </Text>
+            
+          </View>
+        ) : null
+      }
     </View>
   );
 }
@@ -82,9 +102,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
     paddingHorizontal: 16,
-    paddingTop: 24,
+    paddingTop: Platform.OS === "ios" ? 30 : 0,
   },
   header: {
+    paddingTop: 16,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -104,4 +125,18 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  permissionContainer:{
+    backgroundColor: "#f0f0f0",
+    padding: 16,
+    borderRadius: 8,
+    position: "absolute",
+    bottom: 40,
+    left: 16,
+    right: 16,
+    
+  },
+  permissionText:{
+    fontSize: 16,
+    color: "#000",
+  }
 });

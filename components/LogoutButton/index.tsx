@@ -12,8 +12,11 @@ const LogoutButton = () => {
   };
 
   return (
-    <TouchableOpacity onPress={handleLogout} style={{ marginRight: 16 }}>
-      <Ionicons name="log-out-outline" size={24} color="black" />
+    <TouchableOpacity
+      onPress={handleLogout}
+      style={{ marginRight: 16 }}
+      style={{ padding: 8, borderRadius: 6 }}>
+      <Ionicons name="log-out-outline" size={20} color="black" />
     </TouchableOpacity>
   );
 };

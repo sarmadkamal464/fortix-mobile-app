@@ -2,7 +2,7 @@
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import { useEffect, useState } from "react";
-import { Platform } from "react-native";
+import { Alert, Linking, Platform } from "react-native";
 
 export function usePushToken() {
   const [token, setToken] = useState<string | null>(null);
@@ -27,6 +27,18 @@ async function registerForPushNotificationsAsync() {
 
   if (finalStatus !== "granted") {
     console.warn("Push notification permission not granted");
+    Alert.alert('Notification Permission', 'Please enable notification permission for receiving violation alerts',[
+      {
+        text: 'OK',
+        style: 'cancel',
+      },
+      {
+        text: 'Open Settings',
+        onPress: () => {
+          Linking.openSettings();
+        },
+      },
+    ]);
     return null;
   }
 

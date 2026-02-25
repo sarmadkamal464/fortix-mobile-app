@@ -13,6 +13,7 @@ export interface StreamBusinessCase {
   name: string;
   business_case_type: string;
   confidence_threshold: number;
+  model_url: string;
   created_at: string;
   updated_at: string;
 }
