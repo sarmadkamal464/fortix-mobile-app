@@ -27,8 +27,9 @@ export const useAuth = () => {
 
       if (data.require2FA) {
         setRequire2FA(true);
-        setTempToken(data.tempToken!);
         successToast(response.data.message);
+        await SecureStore.setItemAsync("tempToken", data.tempToken);
+        router.push("/2fa"); // Redirect to 2FA screen
         return;
       }
 
@@ -54,6 +55,7 @@ export const useAuth = () => {
         //router.replace("/(tabs)"); // Or '/dashboard' if that's the destination
       }
     } catch (error: any) {
+      console.log("Login failed", JSON.stringify(error));
       errorToast(error?.response?.data?.message || "Login failed");
     } finally {
       setLoading(false);
@@ -63,6 +65,7 @@ export const useAuth = () => {
   const verify2FA = useCallback(
     async (otp: string) => {
       setLoading(true);
+      const tempToken = await SecureStore.getItemAsync("tempToken");
       try {
         const response = await axiosInstance.post<LoginResponse>(
           "/admin/verify-2fa",

@@ -33,6 +33,7 @@ const useFetchStreams = (setState: any) => {
       
       const response = await axiosInstance.get(url);
 
+      console.log("stream response", response.data);
       setState({
         streams: response.data?.data?.streams || [],
         pagination: response.data?.data?.pagination || {},

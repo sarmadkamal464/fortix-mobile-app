@@ -7,17 +7,28 @@ import { Stack, useRouter } from "expo-router";
 import NotificationModal from "@/components/NotificationModel";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import AnimatedSplashScreen from "@/components/AnimatedSplashScreen";
+import { Platform } from "react-native";
 
-// Keep the splash screen visible while we fetch resources
+// Prevent splash from auto-hiding
 SplashScreen.preventAutoHideAsync();
-
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: false,
-    shouldPlaySound: false,
-    shouldSetBadge: false,
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+    priority: Notifications.AndroidNotificationPriority.HIGH,
   }),
 });
+
+// Configure notification channel for Android
+if (Platform.OS === 'android') {
+  Notifications.setNotificationChannelAsync('default', {
+    name: 'default',
+    importance: Notifications.AndroidImportance.MAX,
+    vibrationPattern: [0, 250, 250, 250],
+    lightColor: '#FF231F7C',
+  });
+}
 
 export default function RootLayout() {
   const notificationListener = useRef<Notifications.Subscription>();
@@ -41,6 +52,7 @@ export default function RootLayout() {
     setModalVisible(true);
   };
 
+  // Add effect to monitor modal state changes
   useEffect(() => {
     async function prepare() {
       try {
@@ -69,7 +81,6 @@ export default function RootLayout() {
         showPopup(response.notification);
       });
 
-    // 2. Check if app was launched from a notification when it was killed
     (async () => {
       const lastNotificationResponse =
         await Notifications.getLastNotificationResponseAsync();
@@ -108,12 +119,17 @@ export default function RootLayout() {
   }
 
   return (
-    <SafeAreaProvider>
+    <SafeAreaProvider style={{ flex: 1 }}>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <ToastProvider>
-          <Stack />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+
+              animation: "fade_from_bottom",
+            }}
+          />
           <NotificationModal
-            //key={`-${popupData?.imageUrl}`} // 👈 force remount on changes
             visible={modalVisible}
             onClose={() => setModalVisible(false)}
             imageUrl={popupData.imageUrl}

@@ -17,7 +17,7 @@ import LiveStreamPlayer from "@/components/LiveStreamPlayer";
 import BottomNav from "@/components/BottomNav";
 import useFetchStreams from "@/lib/streaming";
 import { Stack, useRouter } from "expo-router";
-import { StreamState, Stream, RealTimePreviewFiltersQuery, FilterOption } from "@/lib/types/streaming";
+import { StreamState, Stream, RealTimePreviewFiltersQuery } from "@/lib/types/streaming";
 import FortixLogo from "@/assets/images/fortix-logo.png";
 
 export default function LiveMonitoringScreen() {

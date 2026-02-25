@@ -12,6 +12,7 @@ import {
   Alert,
   ActivityIndicator,
   Image,
+  Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -23,31 +24,61 @@ const LoginScreen = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [usernameError, setUsernameError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
   const device_token = usePushToken();
   const [rememberMe, setRememberMe] = useState(false);
-  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+ 
+
+  const validateInputs = () => {
+    let isValid = true;
+
+    if (!username) {
+      setUsernameError("Username is required");
+      isValid = false;
+    } else {
+      setUsernameError("");
+    }
+
+    if (!password) {
+      setPasswordError("Password is required");
+      isValid = false;
+    } else if (password.length < 8) {
+      setPasswordError("Password must be at least 8 characters long");
+      isValid = false;
+    } else {
+      setPasswordError("");
+    }
+
+    return isValid;
+  };
 
   const handleLogin = async () => {
-    if (!username || !password) {
-      Alert.alert("Please enter both username and password");
+    if (!validateInputs()) return;
+
+    if (!device_token && Platform.OS === 'android') {
+      setUsernameError("");
+      setPasswordError("Push token not ready yet. Please try again later.");
+      Alert.alert('Notification Permission', 'Please enable notification permission for receiving violation alerts',[
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Open Settings',
+          onPress: () => {
+            Linking.openSettings();
+          },
+        },
+      ]);
       return;
     }
 
-    if (!device_token) {
-      Alert.alert(
-        "Push token not ready yet. Please wait a few seconds and try again."
-      );
-      return;
-    }
-
-    await authLogin({ username, password, device_token });
+    await authLogin({ username, password, device_token: device_token ?? "" });
   };
 
-  const handleVerify2FA = async () => {
-    await verify2FA(otp);
-  };
-
-  const isLoginDisabled = !username || !password || !device_token;
+  const isLoginDisabled = !username || !password 
 
   return (
     <KeyboardAvoidingView
@@ -169,6 +200,7 @@ const LoginScreen = () => {
         </View>
       </View>
 
+      {/* Loading Overlay */}
       {loading && (
         <View style={styles.loadingOverlay}>
           <View style={styles.spinnerContainer}>
@@ -215,6 +247,15 @@ const styles = StyleSheet.create({
   },
   headingBlock: {
     maxWidth: "90%",
+  },
+  logoContainer: {
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  logo: {
+    width: 150, // Adjust the width of the logo
+    height: 150, // Adjust the height of the logo
+    resizeMode: "contain",
   },
   title: {
     fontSize: 30,
