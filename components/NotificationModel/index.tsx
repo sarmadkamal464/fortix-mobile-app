@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Button,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as FileSystem from "expo-file-system";
 import * as MediaLibrary from "expo-media-library";
@@ -48,6 +49,7 @@ const NotificationModal: React.FC<NotificationModalProps> = ({
   body,
   alert_id,
 }) => {
+  const insets = useSafeAreaInsets();
   const router = useRouter()
   const [loading, setLoading] = useState(true);
   const { successToast, errorToast } = useToast();
@@ -166,8 +168,8 @@ const NotificationModal: React.FC<NotificationModalProps> = ({
     >
       <GestureHandlerRootView style={{ flex: 1 }}>
         <View style={styles.overlay}>
-          <View style={styles.popup}>
-            <View style={styles.headerButtons}>
+          <View style={[styles.popup, { paddingTop: insets.top + 20 }]}>
+            <View style={[styles.headerButtons, { top: insets.top + 10 }]}>
               {imageUrl && (
                 <Pressable
                   style={styles.iconButton}
@@ -240,12 +242,10 @@ const styles = StyleSheet.create({
   },
   popup: {
     flex: 1,
-    paddingTop: 60,
     paddingHorizontal: 20,
   },
   headerButtons: {
     position: "absolute",
-    top: 20,
     right: 20,
     flexDirection: "row",
     zIndex: 10,

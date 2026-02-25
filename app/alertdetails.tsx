@@ -8,9 +8,11 @@ import { Video, ResizeMode } from 'expo-av';
 import { getTimeAgo } from './alerts';
 import BottomNav from '@/components/BottomNav';
 import FortixLogo from '@/assets/images/fortix-logo.png';
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from '@/lib/hooks/auth';
 
 const AlertDetailScreen = () => {
+  const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { logout } = useAuth();
@@ -172,7 +174,7 @@ const AlertDetailScreen = () => {
       />
 
       {/* Custom Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <View style={styles.headerLeft}>
           <Image source={FortixLogo} style={styles.logo} resizeMode="contain" />
         </View>
@@ -238,7 +240,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     backgroundColor: "#2a2a2a",
-    paddingTop: 8,
     paddingBottom: 6,
     paddingHorizontal: 16,
     marginBottom: 16,

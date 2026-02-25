@@ -11,6 +11,7 @@ import {
   Image,
   ScrollView,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/lib/hooks/auth";
 import LiveStreamPlayer from "@/components/LiveStreamPlayer";
@@ -21,6 +22,7 @@ import { StreamState, Stream, RealTimePreviewFiltersQuery } from "@/lib/types/st
 import FortixLogo from "@/assets/images/fortix-logo.png";
 
 export default function LiveMonitoringScreen() {
+  const insets = useSafeAreaInsets();
   const [state, setState] = useState<StreamState>({
     streams: [],
     pagination: {
@@ -273,7 +275,7 @@ export default function LiveMonitoringScreen() {
       />
 
       {/* Custom Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <View style={styles.headerLeft}>
           <Image source={FortixLogo} style={styles.logo} resizeMode="contain" />
         </View>
@@ -559,7 +561,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     backgroundColor: "#2a2a2a",
-    paddingTop: 8,
     paddingBottom: 6,
     marginBottom: 16,
   },

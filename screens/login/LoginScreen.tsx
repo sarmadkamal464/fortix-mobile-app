@@ -14,11 +14,13 @@ import {
   Image,
   Linking,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import FortixLogo from "@/assets/images/fortix-logo.png"
 
 const LoginScreen = () => {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { loading, require2FA, login: authLogin, verify2FA } = useAuth();
   const [username, setUsername] = useState("");
@@ -82,7 +84,7 @@ const LoginScreen = () => {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { paddingTop: insets.top + 20 }]}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <View style={styles.content}>
@@ -105,17 +107,17 @@ const LoginScreen = () => {
         <View style={styles.form}>
           {/* Email */}
           <View style={styles.field}>
-            <Text style={styles.fieldLabel}>EMAIL ADDRESS</Text>
+            <Text style={styles.fieldLabel}>USER NAME</Text>
             <View style={styles.inputWrapper}>
               <Ionicons
-                name="mail-outline"
+                name="person-outline"
                 size={18}
                 color="#9CA3AF"
                 style={styles.leadingIcon}
               />
               <TextInput
                 style={styles.input}
-                placeholder="name@company.com"
+                placeholder="john"
                 placeholderTextColor="#6B7280"
                 autoCapitalize="none"
                 value={username}
@@ -163,23 +165,6 @@ const LoginScreen = () => {
 
           {/* Helpers row */}
           <View style={styles.helpersRow}>
-            <TouchableOpacity
-              style={styles.rememberMe}
-              onPress={() => setRememberMe((prev) => !prev)}
-              activeOpacity={0.8}
-            >
-              <View
-                style={[
-                  styles.checkbox,
-                  rememberMe && styles.checkboxChecked,
-                ]}
-              >
-                {rememberMe && (
-                  <Ionicons name="checkmark" size={14} color="#020617" />
-                )}
-              </View>
-              <Text style={styles.rememberMeText}>Remember me</Text>
-            </TouchableOpacity>
 
             <TouchableOpacity activeOpacity={0.8} onPress={() => router.push("/forgot-password")}>
               <Text style={styles.forgotPasswordText}>
@@ -220,7 +205,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#020617",
     paddingHorizontal: 24,
-    paddingTop: 72,
   },
   content: {
     flex: 1,
@@ -310,7 +294,7 @@ const styles = StyleSheet.create({
   helpersRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "flex-end",
     marginTop: 6,
   },
   rememberMe: {

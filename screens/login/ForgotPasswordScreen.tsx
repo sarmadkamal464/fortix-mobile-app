@@ -12,12 +12,14 @@ import {
     Image,
     ScrollView,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useForgotPassword } from "@/lib/hooks/auth/useForgotPassword";
 import FortixLogo from "@/assets/images/fortix-logo.png";
 
 const ForgotPasswordScreen = () => {
+    const insets = useSafeAreaInsets();
     const router = useRouter();
     const {
         loading,
@@ -256,7 +258,7 @@ const ForgotPasswordScreen = () => {
             style={styles.container}
             behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
-            <ScrollView contentContainerStyle={styles.scrollContent}>
+            <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 20 }]}>
                 <View style={styles.header}>
                     <Image source={FortixLogo} style={styles.logoImage} resizeMode="contain" />
                 </View>
@@ -296,7 +298,6 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         paddingHorizontal: 24,
-        paddingTop: 72,
         paddingBottom: 40,
     },
     header: {
