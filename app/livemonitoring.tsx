@@ -563,6 +563,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#2a2a2a",
     paddingBottom: 6,
     marginBottom: 16,
+    paddingHorizontal: 8,
   },
   headerLeft: {
     flexDirection: "row",
@@ -598,6 +599,7 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
+    marginHorizontal: 16,
     marginBottom: 16,
     gap: 12,
   },
@@ -641,6 +643,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 16,
     marginBottom: 16,
+    marginHorizontal: 16,
     borderWidth: 1,
     borderColor: "#333",
   },
@@ -728,6 +731,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingVertical: 60,
+    paddingHorizontal: 20,
   },
   emptyText: {
     color: "#fff",
@@ -755,6 +759,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     marginBottom: 16,
+    marginHorizontal: 16,
     borderWidth: 1,
     borderColor: "#2a2a2a",
   },
