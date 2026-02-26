@@ -35,7 +35,7 @@ export default function AnimatedSplashScreen({
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#ffffff", // Match app.json background
+        backgroundColor: "#000", // Match app.json background
         justifyContent: "center",
         alignItems: "center",
     },

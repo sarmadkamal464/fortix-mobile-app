@@ -6,8 +6,9 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Stack, useRouter } from "expo-router";
 import NotificationModal from "@/components/NotificationModel";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import AnimatedSplashScreen from "@/components/AnimatedSplashScreen";
-import { Platform } from "react-native";
+import { Platform, StyleSheet } from "react-native";
+import { Animated } from "react-native";
+import SplashView from "@/components/Splash";
 
 // Prevent splash from auto-hiding
 SplashScreen.preventAutoHideAsync();
@@ -34,6 +35,7 @@ export default function RootLayout() {
   const notificationListener = useRef<Notifications.Subscription>();
   const responseListener = useRef<Notifications.Subscription>();
   const router = useRouter();
+  const fadeAnim = useRef(new Animated.Value(1)).current;
   const [modalVisible, setModalVisible] = useState(false);
   const [appIsReady, setAppIsReady] = useState(false);
   const [splashAnimationFinished, setSplashAnimationFinished] = useState(false);
@@ -110,11 +112,18 @@ export default function RootLayout() {
 
   if (!splashAnimationFinished) {
     return (
-      <AnimatedSplashScreen
-        onAnimationFinish={() => {
-          setSplashAnimationFinished(true);
-        }}
-      />
+      <Animated.View
+        style={[
+          styles.container,
+          styles.splashContainer,
+          { opacity: fadeAnim },
+        ]}>
+        <SplashView
+          onAnimationFinish={() => {
+            setSplashAnimationFinished(true);
+          }}
+        />
+      </Animated.View>
     );
   }
 
@@ -142,3 +151,18 @@ export default function RootLayout() {
     </SafeAreaProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  splashContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 999,
+    backgroundColor: '#000',
+  },
+});
