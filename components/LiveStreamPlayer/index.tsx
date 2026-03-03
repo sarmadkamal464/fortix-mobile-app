@@ -8,6 +8,8 @@ import {
   ActivityIndicator,
   Dimensions,
   ScaledSize,
+  Modal,
+  StatusBar,
 } from "react-native";
 import { WebView } from "react-native-webview";
 import { Ionicons } from "@expo/vector-icons";
@@ -176,20 +178,16 @@ export default function LiveStreamPlayer({
   }, []);
 
   const handleToggleFullscreen = async () => {
-    try {
-      if (!isFullscreen) {
-        await ScreenOrientation.lockAsync(
-          ScreenOrientation.OrientationLock.LANDSCAPE
-        );
-      } else {
-        await ScreenOrientation.lockAsync(
-          ScreenOrientation.OrientationLock.PORTRAIT_UP
-        );
-      }
-      setIsFullscreen((prev) => !prev);
-    } catch (error) {
-      console.warn("Error toggling fullscreen:", error);
+    if (!isFullscreen) {
+      await ScreenOrientation.lockAsync(
+        ScreenOrientation.OrientationLock.LANDSCAPE
+      );
+    } else {
+      await ScreenOrientation.lockAsync(
+        ScreenOrientation.OrientationLock.PORTRAIT
+      );
     }
+    setIsFullscreen(!isFullscreen);
   };
 
   const { width, height } = dimensions;
@@ -212,7 +210,8 @@ export default function LiveStreamPlayer({
     isOnline && streamUrl ? buildHlsHtml(streamUrl) : null;
 
   return (
-    <Pressable style={styles.cardContainer}>
+    <>
+    {!isFullscreen && <Pressable style={styles.cardContainer}>
       <View style={styles.videoContainer}>
         <PinchGestureHandler onGestureEvent={onPinchEvent} onEnded={onPinchEnd}>
           <Animated.View
@@ -349,7 +348,80 @@ export default function LiveStreamPlayer({
           </Pressable>
         </View>
       )}
-    </Pressable>
+    </Pressable>}
+    <Modal
+      visible={isFullscreen}
+      animationType="fade"
+      presentationStyle="fullScreen"
+      supportedOrientations={["landscape"]}
+      onRequestClose={handleToggleFullscreen}
+    >
+      <StatusBar hidden />
+      <View style={styles.fullscreenModalContainer}>
+        <View style={styles.fullscreenContent}>
+          {isOnline && hlsHtml ? (
+            <WebView
+              key={webViewKey.current}
+              source={{ html: hlsHtml, baseUrl: streamBaseUrl }}
+              style={{ width: videoWidth, height: videoHeight, backgroundColor: "#000" }}
+              originWhitelist={["*"]}
+              allowsInlineMediaPlayback
+              mediaPlaybackRequiresUserAction={false}
+              javaScriptEnabled
+              domStorageEnabled
+              mixedContentMode="always"
+              onMessage={(event) => {
+                const msg = event.nativeEvent.data;
+                if (msg === "ready") {
+                  setIsBuffering(false);
+                } else if (msg.startsWith("error:")) {
+                  console.log("HLS ERROR:", msg);
+                  setIsBuffering(false);
+                }
+              }}
+              onLoadStart={() => setIsBuffering(true)}
+              onLoadEnd={() => {
+                // WebView loaded — actual stream ready fires via postMessage
+              }}
+              onError={(e) => {
+                console.log("WEBVIEW ERROR:", e.nativeEvent);
+                setIsBuffering(false);
+              }}
+              scrollEnabled={false}
+              bounces={false}
+              overScrollMode="never"
+              showsHorizontalScrollIndicator={false}
+              showsVerticalScrollIndicator={false}
+            />
+          ) : null}
+        {isBuffering && isOnline && (
+            <View style={styles.loaderOverlay}>
+              <ActivityIndicator size="large" color="#fff" />
+            </View>
+          )}
+        </View>
+        {/* Overlay Controls */}
+        <View style={styles.overlayControls}>
+          <Pressable
+            style={styles.exitFullscreenPill}
+            onPress={handleToggleFullscreen}
+          >
+            <Ionicons name="expand" size={18} color="#000" />
+            <Text style={styles.exitFullscreenText}>
+              EXIT FULL SCREEN
+            </Text>
+          </Pressable>
+
+          <Pressable
+            style={styles.closeFullscreenButton}
+            onPress={handleToggleFullscreen}
+          >
+            <Ionicons name="close" size={24} color="#fff" />
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
+    </>
   );
 }
 
@@ -530,5 +602,56 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginLeft: 12,
+  },
+  fullscreenModalContainer: {
+    flex: 1,
+    backgroundColor: "#000",
+  },
+
+  fullscreenContent: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  fullscreenVideo: {
+    width: "100%",
+    height: "100%",
+    backgroundColor: "#000",
+  },
+
+  overlayControls: {
+    position: "absolute",
+    left: 20,
+    top: 20,
+    right: 20,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  exitFullscreenPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#00BCD4",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 8,
+    gap: 8,
+  },
+
+  exitFullscreenText: {
+    color: "#000",
+    fontSize: 12,
+    fontWeight: "800",
+  },
+
+  closeFullscreenButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
