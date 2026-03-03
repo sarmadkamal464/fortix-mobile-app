@@ -178,16 +178,20 @@ export default function LiveStreamPlayer({
   }, []);
 
   const handleToggleFullscreen = async () => {
-    if (!isFullscreen) {
+    try {
+      const next = !isFullscreen;
+
       await ScreenOrientation.lockAsync(
-        ScreenOrientation.OrientationLock.LANDSCAPE
+        next
+          ? ScreenOrientation.OrientationLock.LANDSCAPE
+          : ScreenOrientation.OrientationLock.PORTRAIT_UP
       );
-    } else {
-      await ScreenOrientation.lockAsync(
-        ScreenOrientation.OrientationLock.PORTRAIT
-      );
+
+      setIsFullscreen(next);
+    } catch (e) {
+      console.warn("Orientation lock failed:", e);
+      // Optional: show a toast, or keep state unchanged
     }
-    setIsFullscreen(!isFullscreen);
   };
 
   const { width, height } = dimensions;
