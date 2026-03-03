@@ -2,8 +2,8 @@
   "expo": {
     "name": "fortix-mobile-app",
     "slug": "fortix-mobile-app",
-    "version": "1.0.1",
-    "orientation": "portrait",
+    "version": "2.0.0",
+    "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
@@ -14,11 +14,13 @@
     ],
     "ios": {
       "supportsTablet": true,
+      "buildNumber": "5",
       "bundleIdentifier": "com.anonymous.fortixmobileapp",
       "infoPlist": {
         "NSUserTrackingUsageDescription": "This identifier will be used to deliver personalized ads to you",
         "UIBackgroundModes": ["remote-notification"]
-      }
+      },
+      "autoIncrement": true
     },
     "android": {
       "usesCleartextTraffic": true,
@@ -34,7 +36,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.anonymous.fortixmobileapp",
-      "versionCode": 2
+      "versionCode": 5
     },
     "web": {
       "bundler": "metro",

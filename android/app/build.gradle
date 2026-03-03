@@ -34,8 +34,8 @@ android {
         applicationId 'com.anonymous.fortixmobileapp'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 2
-        versionName "1.0.2"
+        versionCode 5
+        versionName "2.0.0"
     }
 
     signingConfigs {

@@ -1621,6 +1621,71 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
+  - react-native-video (6.19.0):
+    - DoubleConversion
+    - glog
+    - RCT-Folly (= 2024.10.14.00)
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - react-native-video/Video (= 6.19.0)
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - Yoga
+  - react-native-video/Fabric (6.19.0):
+    - DoubleConversion
+    - glog
+    - RCT-Folly (= 2024.10.14.00)
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - Yoga
+  - react-native-video/Video (6.19.0):
+    - DoubleConversion
+    - glog
+    - RCT-Folly (= 2024.10.14.00)
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - react-native-video/Fabric
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - Yoga
   - react-native-webview (13.12.5):
     - DoubleConversion
     - glog
@@ -2186,6 +2251,7 @@ DEPENDENCIES:
   - React-Mapbuffer (from `../node_modules/react-native/ReactCommon`)
   - React-microtasksnativemodule (from `../node_modules/react-native/ReactCommon/react/nativemodule/microtasks`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
+  - react-native-video (from `../node_modules/react-native-video`)
   - react-native-webview (from `../node_modules/react-native-webview`)
   - React-nativeconfig (from `../node_modules/react-native/ReactCommon`)
   - React-NativeModulesApple (from `../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios`)
@@ -2355,6 +2421,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon/react/nativemodule/microtasks"
   react-native-safe-area-context:
     :path: "../node_modules/react-native-safe-area-context"
+  react-native-video:
+    :path: "../node_modules/react-native-video"
   react-native-webview:
     :path: "../node_modules/react-native-webview"
   React-nativeconfig:
@@ -2488,6 +2556,7 @@ SPEC CHECKSUMS:
   React-Mapbuffer: 6efad4a606c1fae7e4a93385ee096681ef0300dc
   React-microtasksnativemodule: 252ac3840dc5e527cf5baf5067ce281846538eda
   react-native-safe-area-context: 34cef0fd4d0f832e156e56cf64cfb9bc38cec70c
+  react-native-video: ebeda74bc0aaff3265529ad86475cbd6cf6c44ba
   react-native-webview: ade989dd1645a4035ad2004a9a1c779cd482742c
   React-nativeconfig: 8efdb1ef1e9158c77098a93085438f7e7b463678
   React-NativeModulesApple: cc37e2f0e36a8df145be2e0d6060bb67ca2cecd9
@@ -2525,4 +2594,4 @@ SPEC CHECKSUMS:
 
 PODFILE CHECKSUM: d00b11438bf93ffb52b5006ac8ddb251fa1ed135
 
-COCOAPODS: 1.15.2
+COCOAPODS: 1.16.2
