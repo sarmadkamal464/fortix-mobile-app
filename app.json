@@ -13,7 +13,6 @@
       "buildNumber": "7",
       "bundleIdentifier": "com.anonymous.fortixmobileapp",
       "infoPlist": {
-        "NSUserTrackingUsageDescription": "This identifier will be used to deliver personalized ads to you",
         "UIBackgroundModes": ["remote-notification"]
       }
     },
