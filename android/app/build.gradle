@@ -34,7 +34,7 @@ android {
         applicationId 'com.anonymous.fortixmobileapp'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 5
+        versionCode 7
         versionName "2.0.0"
     }
 
