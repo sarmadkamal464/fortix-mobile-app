@@ -3,6 +3,7 @@ import * as Notifications from "expo-notifications";
 import * as SplashScreen from "expo-splash-screen";
 import { ToastProvider } from "@/lib/utils/toast";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+
 import { Stack, useRouter } from "expo-router";
 import NotificationModal from "@/components/NotificationModel";
 import { SafeAreaProvider } from "react-native-safe-area-context";
