@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import * as Notifications from "expo-notifications";
 import * as SplashScreen from "expo-splash-screen";
 import { ToastProvider } from "@/lib/utils/toast";
@@ -46,6 +46,9 @@ export default function RootLayout() {
     alert_id?: string;
   }>({});
 
+  // Holds a notification that arrived before the splash finished.
+  const pendingNotification = useRef<Notifications.Notification | null>(null);
+
   const showPopup = (notification: Notifications.Notification) => {
     const { title, body, data } = notification.request.content;
     const imageUrl = (data as any).image_url;
@@ -53,6 +56,23 @@ export default function RootLayout() {
     setPopupData({ title, body, imageUrl, alert_id });
     setModalVisible(true);
   };
+
+  // Queue popup if app isn't fully loaded yet; otherwise show immediately.
+  const showPopupWhenReady = (notification: Notifications.Notification) => {
+    if (splashAnimationFinished) {
+      showPopup(notification);
+    } else {
+      pendingNotification.current = notification;
+    }
+  };
+
+  // Flush any queued popup once the splash animation finishes.
+  useEffect(() => {
+    if (splashAnimationFinished && pendingNotification.current) {
+      showPopup(pendingNotification.current);
+      pendingNotification.current = null;
+    }
+  }, [splashAnimationFinished]);
 
   // Add effect to monitor modal state changes
   useEffect(() => {
@@ -80,15 +100,15 @@ export default function RootLayout() {
 
     responseListener.current =
       Notifications.addNotificationResponseReceivedListener((response) => {
-        showPopup(response.notification);
+        showPopupWhenReady(response.notification);
       });
 
     (async () => {
       const lastNotificationResponse =
         await Notifications.getLastNotificationResponseAsync();
       if (lastNotificationResponse) {
-        await router.push(`/alertdetails?id=${lastNotificationResponse.notification.request.content.data.alert_id}`)
-        showPopup(lastNotificationResponse.notification);
+        // Kill state: queue the popup; it will show once splash animation finishes.
+        showPopupWhenReady(lastNotificationResponse.notification);
       }
     })();
 
