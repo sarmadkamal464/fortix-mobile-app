@@ -1,6 +1,7 @@
 import axios from "axios";
 import * as SecureStore from "expo-secure-store";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
 
 const axiosInstance = axios.create({
   baseURL: process.env.EXPO_PUBLIC_API_URL, // Use EXPO_PUBLIC_ for Expo
@@ -12,6 +13,7 @@ const axiosInstance = axios.create({
 // Request interceptor
 axiosInstance.interceptors.request.use(
   async (config) => {
+    console.log("config", process.env.EXPO_PUBLIC_API_URL);
     const token = await SecureStore.getItemAsync("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -29,6 +31,8 @@ axiosInstance.interceptors.response.use(
       await SecureStore.deleteItemAsync("token");
       await AsyncStorage.removeItem("user");
 
+      const router = useRouter();
+      router.replace("/login"); // Ensure the user is redirected to the login screen
       // Optionally trigger a logout event or navigate to login
       // e.g., use a global event emitter or context
 

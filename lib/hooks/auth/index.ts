@@ -5,7 +5,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import axiosInstance from "@/lib/utils/axios";
 import { LoginCredentials, LoginResponse } from "@/lib/types/auth";
-import { useToast } from "@/lib/utils/toast"; // Should be compatible with React Native
+import { useToast } from "@/lib/utils/toast";
 import { getTokenExpiryInDays } from "@/lib/utils/constants";
 
 export const useAuth = () => {
@@ -27,18 +27,21 @@ export const useAuth = () => {
 
       if (data.require2FA) {
         setRequire2FA(true);
-        setTempToken(data.tempToken!);
         successToast(response.data.message);
+        await SecureStore.setItemAsync("tempToken", data.tempToken);
+        router.push("/2fa"); // Redirect to 2FA screen
         return;
       }
 
       if (data.token) {
         const token = data.token;
         const user = data.user;
+        const podId = data.userHasGPU?.pod_id || ""
         const expiryInDays = getTokenExpiryInDays(token);
 
         // Save token and user
         await SecureStore.setItemAsync("token", token);
+        await SecureStore.setItemAsync("podId", podId);
         await SecureStore.setItemAsync("role", user?.role ?? "");
         await AsyncStorage.setItem("user", JSON.stringify(user));
 
@@ -52,6 +55,7 @@ export const useAuth = () => {
         //router.replace("/(tabs)"); // Or '/dashboard' if that's the destination
       }
     } catch (error: any) {
+      console.log("Login failed", JSON.stringify(error));
       errorToast(error?.response?.data?.message || "Login failed");
     } finally {
       setLoading(false);
@@ -61,6 +65,7 @@ export const useAuth = () => {
   const verify2FA = useCallback(
     async (otp: string) => {
       setLoading(true);
+      const tempToken = await SecureStore.getItemAsync("tempToken");
       try {
         const response = await axiosInstance.post<LoginResponse>(
           "/admin/verify-2fa",

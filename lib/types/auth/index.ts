@@ -1,6 +1,9 @@
+import { UserHasAssignedGPU } from "../streaming";
+
 export interface LoginCredentials {
   username: string;
   password: string;
+  device_token: string;
 }
 export interface User {
   id: number;
@@ -19,6 +22,7 @@ export interface LoginResponse {
     token?: string;
     tempToken?: string;
     require2FA?: boolean;
+    userHasGPU?: UserHasAssignedGPU
   };
 }
 export interface Verify2FARequest {
