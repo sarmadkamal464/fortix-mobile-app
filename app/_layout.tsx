@@ -3,6 +3,7 @@ import * as Notifications from "expo-notifications";
 import * as SplashScreen from "expo-splash-screen";
 import { ToastProvider } from "@/lib/utils/toast";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { Stack, useRouter } from "expo-router";
 import NotificationModal from "@/components/NotificationModel";
@@ -50,8 +51,16 @@ export default function RootLayout() {
   // Holds a notification that arrived before the splash finished.
   const pendingNotification = useRef<Notifications.Notification | null>(null);
 
-  const showPopup = (notification: Notifications.Notification) => {
+  const showPopup = async (notification: Notifications.Notification) => {
     const { title, body, data } = notification.request.content;
+    const identifier = notification.request.identifier;
+    // Store the identifier to prevent showing it again on app restart
+    try {
+      await AsyncStorage.setItem('lastHandledNotificationId', identifier);
+    } catch (e) {
+      console.warn("Error saving notification state:", e);
+    }
+
     const imageUrl = (data as any).image_url;
     const alert_id = (data as any).alert_id;
     setPopupData({ title, body, imageUrl, alert_id });
@@ -108,8 +117,15 @@ export default function RootLayout() {
       const lastNotificationResponse =
         await Notifications.getLastNotificationResponseAsync();
       if (lastNotificationResponse) {
-        // Kill state: queue the popup; it will show once splash animation finishes.
-        showPopupWhenReady(lastNotificationResponse.notification);
+        const identifier = lastNotificationResponse.notification.request.identifier;
+        const lastHandledId = await AsyncStorage.getItem('lastHandledNotificationId');
+
+        if (identifier !== lastHandledId) {
+          // Kill state: queue the popup; it will show once splash animation finishes.
+          showPopupWhenReady(lastNotificationResponse.notification);
+        } else {
+          console.log("Notification already handled, skipping modal.");
+        }
       }
     })();
 
